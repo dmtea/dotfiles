@@ -139,9 +139,15 @@ run_module() {
     echo "=== Running module: $module ==="
     (
         export SCRIPT_DIR MODULES_DIR STATE_DIR LOG_FILE BOOTSTRAP_FORCE
+        [ -f "$STATE_DIR/saved-path" ] && export PATH="$(cat "$STATE_DIR/saved-path")"
         source "$module_file"
+        echo "$PATH" > "$STATE_DIR/saved-path"
     )
     local rc=$?
+
+    if [ -f "$STATE_DIR/saved-path" ]; then
+        export PATH="$(cat "$STATE_DIR/saved-path")"
+    fi
 
     if [ $rc -eq 0 ]; then
         SUCCEEDED+=("$module")

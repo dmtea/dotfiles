@@ -10,7 +10,7 @@ if [ -z "${1:-}" ] || [ "$1" != "$REENTRY_MARKER" ]; then
     trap 'rm -f "$TMPFILE"' EXIT
     cat > "$TMPFILE"
     chmod +x "$TMPFILE"
-    exec bash "$TMPFILE" "$REENTRY_MARKER" "$@"
+    exec bash "$TMPFILE" "$REENTRY_MARKER" "$@" < /dev/tty
 fi
 
 shift
