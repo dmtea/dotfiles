@@ -19,7 +19,7 @@ fi
 
 mkdir -p ~/.local/share/applications
 cp "$KITTY_DIR/share/applications/"*.desktop ~/.local/share/applications/ 2>/dev/null
-update-desktop-database ~/.local/share/applications 2>/dev/null
+update-desktop-database ~/.local/share/applications 2>/dev/null || true
 
 add_to_path "$KITTY_DIR/bin"
 
@@ -77,6 +77,6 @@ else
     log_info "FiraMono Nerd Font installed"
 fi
 
-fc-cache -fv "$FONT_DIR" 2>/dev/null
+fc-cache -fv "$FONT_DIR" 2>/dev/null || true
 
 write_marker "02-terminal-fonts"
