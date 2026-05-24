@@ -1,6 +1,19 @@
 #!/usr/bin/env bash
 # Usage: curl -fsSL <raw-url>/install.sh | bash
+# Or:   bash install.sh (run directly)
 set -euo pipefail
+
+REENTRY_MARKER="__DOTFILES_INSTALL_REENTRY__"
+
+if [ -z "${1:-}" ] || [ "$1" != "$REENTRY_MARKER" ]; then
+    TMPFILE=$(mktemp /tmp/dotfiles-install.XXXXXX.sh)
+    trap 'rm -f "$TMPFILE"' EXIT
+    cat > "$TMPFILE"
+    chmod +x "$TMPFILE"
+    exec bash "$TMPFILE" "$REENTRY_MARKER" "$@"
+fi
+
+shift
 
 REPO_URL="https://github.com/dmtea/dotfiles.git"
 CLONE_DIR="$HOME/dotfiles"
@@ -65,5 +78,4 @@ fi
 
 echo "Starting bootstrap..."
 chmod +x bootstrap.sh
-exec </dev/tty >/dev/tty 2>&1
 exec ./bootstrap.sh "$@"
