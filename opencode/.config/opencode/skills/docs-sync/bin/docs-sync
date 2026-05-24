@@ -1,0 +1,602 @@
+#!/usr/bin/env bash
+#
+# docs-sync - Documentation freshness & sync manager
+# Part of the docs-sync skill for oh-my-openagent
+#
+# Locations:
+#   Script: ~/.config/opencode/skills/docs-sync/bin/docs-sync
+#   Config: ~/.config/opencode/skills/docs-sync/config.json
+#   Data:   ~/.cache/ai_docs_sync/
+#
+
+set -euo pipefail
+
+# XDG-compliant paths
+XDG_CACHE_HOME="${XDG_CACHE_HOME:-$HOME/.cache}"
+XDG_CONFIG_HOME="${XDG_CONFIG_HOME:-$HOME/.config}"
+
+SKILL_DIR="$XDG_CONFIG_HOME/opencode/skills/docs-sync"
+CONFIG_FILE="$SKILL_DIR/config.json"
+CACHE_DIR="$XDG_CACHE_HOME/ai_docs_sync"
+MANIFEST="$CACHE_DIR/.manifest.json"
+DOCS_DIR="$CACHE_DIR/docs"
+
+# Default values (overridden by config.json)
+DEFAULT_SPARSE="docs/,README.md,CHANGELOG.md"
+DEFAULT_BRANCH="auto"
+DEFAULT_TTL=24
+PREFERRED_LANGS="en,ru"
+LANG_CLEANUP_ENABLED=true
+
+# Colors
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+CYAN='\033[0;36m'
+NC='\033[0m'
+
+# ============================================================================
+# INITIALIZATION
+# ============================================================================
+
+init() {
+    mkdir -p "$DOCS_DIR"
+    if [[ ! -f "$MANIFEST" ]]; then
+        echo '{"version":1,"docs":{}}' > "$MANIFEST"
+    fi
+}
+
+load_config() {
+    if [[ -f "$CONFIG_FILE" ]]; then
+        # Parse config with jq, falling back to defaults
+        DEFAULT_SPARSE=$(jq -r '.default_sparse_paths | join(",") // "docs/,README.md,CHANGELOG.md"' "$CONFIG_FILE" 2>/dev/null || echo "$DEFAULT_SPARSE")
+        DEFAULT_BRANCH=$(jq -r '.default_branch // "auto"' "$CONFIG_FILE" 2>/dev/null || echo "auto")
+        DEFAULT_TTL=$(jq -r '.default_ttl_hours // 24' "$CONFIG_FILE" 2>/dev/null || echo "24")
+        PREFERRED_LANGS=$(jq -r '.preferred_languages | join(",") // "en,ru"' "$CONFIG_FILE" 2>/dev/null || echo "en,ru")
+        LANG_CLEANUP_ENABLED=$(jq -r '.language_cleanup.enabled // true' "$CONFIG_FILE" 2>/dev/null || echo "true")
+    fi
+}
+
+# ============================================================================
+# UTILITY FUNCTIONS
+# ============================================================================
+
+get_manifest() {
+    cat "$MANIFEST"
+}
+
+timestamp_now() {
+    date -Iseconds
+}
+
+age_hours() {
+    local ts="$1"
+    local ts_epoch=$(date -d "$ts" +%s 2>/dev/null || date -j -f "%Y-%m-%dT%H:%M:%S%z" "$ts" +%s 2>/dev/null || echo "0")
+    local now_epoch=$(date +%s)
+    echo $(( (now_epoch - ts_epoch) / 3600 ))
+}
+
+is_stale() {
+    local name="$1"
+    local manifest_json=$(get_manifest)
+    local last_fetch=$(echo "$manifest_json" | jq -r ".docs[\"$name\"].last_fetch // empty")
+    local ttl=$(echo "$manifest_json" | jq -r ".docs[\"$name\"].update_interval_hours // $DEFAULT_TTL")
+    
+    if [[ -z "$last_fetch" ]]; then
+        return 0  # No fetch record = stale
+    fi
+    
+    local age=$(age_hours "$last_fetch")
+    [[ $age -ge $ttl ]]
+}
+
+# Auto-detect default branch
+detect_default_branch() {
+    local url="$1"
+    local branch=""
+    
+    # Try to get default branch from remote
+    # Output format: "ref: refs/heads/<branch>\tHEAD"
+    branch=$(git ls-remote --symref "$url" HEAD 2>/dev/null | \
+        awk '/ref: refs\/heads\// {gsub(/\t/, " "); for(i=1;i<=NF;i++) if($i ~ /^refs\/heads\//) {sub(/^refs\/heads\//,"",$i); print $i; exit}}')
+    
+    if [[ -n "$branch" ]]; then
+        echo "$branch"
+    else
+        echo "main"  # Fallback
+    fi
+}
+
+# Language code matching (handles en, en-US, en_GB, etc.)
+lang_matches() {
+    local dir_name="$1"
+    local preferred="$2"
+    
+    # Normalize and match
+    local dir_lower=$(echo "$dir_name" | tr '[:upper:]' '[:lower:]')
+    local pref_lower=$(echo "$preferred" | tr '[:upper:]' '[:lower:]')
+    
+    # Direct match
+    [[ "$dir_lower" == "$pref_lower" ]] && return 0
+    
+    # Prefix match (en-US matches en, ru-RU matches ru)
+    [[ "$dir_lower" == "${pref_lower}"-* ]] && return 0
+    [[ "$dir_lower" == "${pref_lower}_"* ]] && return 0
+    
+    # Common name variants
+    case "$pref_lower" in
+        en) [[ "$dir_lower" =~ ^english$ ]] && return 0 ;;
+        ru) [[ "$dir_lower" =~ ^russian$ ]] && return 0 ;;
+    esac
+    
+    return 1
+}
+
+# Clean up unwanted language directories
+cleanup_languages() {
+    local repo_dir="$1"
+    local langs="$2"
+    
+    if [[ "$LANG_CLEANUP_ENABLED" != "true" ]]; then
+        return
+    fi
+    
+    echo -e "${CYAN}Cleaning up unwanted languages (keeping: $langs)...${NC}"
+    
+    local -a keep_langs=()
+    IFS=',' read -ra langs_arr <<< "$langs"
+    for lang in "${langs_arr[@]}"; do
+        keep_langs+=("$(echo "$lang" | tr -d ' ')")
+    done
+    
+    # Common language directories to check
+    local common_langs=(ar bg bs ca cs da de el en es et fa fi fr he hi hr hu id it ja ko lt lv nl no pl pt ro ru sk sl sr sv th tr uk vi zh zht)
+    
+    local removed_count=0
+    
+    for lang_dir in "${common_langs[@]}"; do
+        local should_remove=true
+        
+        for keep in "${keep_langs[@]}"; do
+            if lang_matches "$lang_dir" "$keep"; then
+                should_remove=false
+                break
+            fi
+        done
+        
+        if [[ "$should_remove" == true ]]; then
+            # Find and remove matching directories
+            while IFS= read -r -d '' dir; do
+                rm -rf "$dir"
+                ((removed_count++)) || true
+            done < <(find "$repo_dir" -type d -iname "$lang_dir" -print0 2>/dev/null | head -50)
+        fi
+    done
+    
+    if [[ $removed_count -gt 0 ]]; then
+        echo -e "${GREEN}  Removed $removed_count language directories${NC}"
+    fi
+}
+
+# ============================================================================
+# COMMANDS
+# ============================================================================
+
+cmd_add() {
+    local name=""
+    local url=""
+    local sparse="$DEFAULT_SPARSE"
+    local branch="$DEFAULT_BRANCH"
+    local pin=""
+    local langs="$PREFERRED_LANGS"
+    
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            --sparse) sparse="$2"; shift 2 ;;
+            --branch) branch="$2"; shift 2 ;;
+            --pin) pin="$2"; shift 2 ;;
+            --langs) langs="$2"; shift 2 ;;
+            *) 
+                if [[ -z "$name" ]]; then
+                    name="$1"
+                elif [[ -z "$url" ]]; then
+                    url="$1"
+                fi
+                shift
+                ;;
+        esac
+    done
+    
+    if [[ -z "$name" || -z "$url" ]]; then
+        echo -e "${RED}Usage: docs-sync add <name> <url> [options]${NC}"
+        echo "Options:"
+        echo "  --sparse <paths>   Comma-separated paths (default: $DEFAULT_SPARSE)"
+        echo "  --branch <name>    Branch to track (default: auto-detect)"
+        echo "  --pin <version>    Pin to specific tag/commit"
+        echo "  --langs <codes>    Languages to keep (default: $PREFERRED_LANGS)"
+        exit 1
+    fi
+    
+    local repo_dir="$DOCS_DIR/$name"
+    
+    if [[ -d "$repo_dir" ]]; then
+        echo -e "${YELLOW}Docs '$name' already exists at $repo_dir${NC}"
+        echo "Use 'docs-sync update $name' to refresh, or 'docs-sync remove $name' first."
+        exit 1
+    fi
+    
+    echo -e "${BLUE}Adding docs for '$name'...${NC}"
+    
+    # Auto-detect branch if needed
+    if [[ "$branch" == "auto" ]]; then
+        echo -e "${CYAN}  Detecting default branch...${NC}"
+        branch=$(detect_default_branch "$url")
+        echo -e "${CYAN}  → Using branch: $branch${NC}"
+    fi
+    
+    # Clone without checkout
+    echo -e "${CYAN}  Cloning repository...${NC}"
+    if ! git clone --filter=blob:none --no-checkout --depth 1 "$url" "$repo_dir" 2>&1; then
+        echo -e "${RED}✗ Failed to clone $url${NC}"
+        rm -rf "$repo_dir"
+        exit 1
+    fi
+    
+    # Initialize sparse checkout
+    cd "$repo_dir"
+    if ! git sparse-checkout init --cone 2>&1; then
+        echo -e "${RED}✗ Failed to init sparse checkout${NC}"
+        rm -rf "$repo_dir"
+        exit 1
+    fi
+    
+    # Set sparse paths
+    if ! git sparse-checkout set ${sparse//,/ } 2>&1; then
+        echo -e "${YELLOW}  Warning: sparse-checkout set had issues${NC}"
+    fi
+    
+    # Checkout the branch
+    if ! git checkout "$branch" 2>&1; then
+        echo -e "${RED}✗ Failed to checkout branch '$branch'${NC}"
+        rm -rf "$repo_dir"
+        exit 1
+    fi
+    
+    # Pin version if specified
+    if [[ -n "$pin" ]]; then
+        if ! git checkout "$pin" 2>&1; then
+            echo -e "${YELLOW}  Warning: Could not pin to $pin${NC}"
+        fi
+    fi
+    
+    # Clean up unwanted languages
+    cleanup_languages "$repo_dir" "$langs"
+    
+    # Verify we got files
+    local file_count=$(find . -type f ! -path './.git/*' | wc -l)
+    if [[ $file_count -eq 0 ]]; then
+        echo -e "${YELLOW}  Warning: No files checked out. Check --sparse paths.${NC}"
+    fi
+    
+    local ts=$(timestamp_now)
+    local expanded_path="${repo_dir/#$HOME/\~}"
+    
+    # Update manifest
+    local manifest_json=$(get_manifest)
+    local sparse_json=$(echo "$sparse" | jq -R 'split(",")')
+    local langs_json=$(echo "$langs" | jq -R 'split(",")')
+    local new_entry=$(cat <<EOF
+{
+  "url": "$url",
+  "path": "$expanded_path",
+  "sparse_paths": $sparse_json,
+  "branch": "$branch",
+  "pinned_version": $( [[ -n "$pin" ]] && echo "\"$pin\"" || echo "null" ),
+  "preferred_languages": $langs_json,
+  "update_interval_hours": $DEFAULT_TTL,
+  "last_fetch": "$ts",
+  "etag": null
+}
+EOF
+)
+    echo "$manifest_json" | jq ".docs[\"$name\"] = $new_entry" > "$MANIFEST"
+    
+    echo -e "${GREEN}✓ Added '$name' → $repo_dir${NC}"
+    echo -e "  Files: $file_count | Branch: $branch | Languages: $langs"
+}
+
+cmd_update() {
+    local name=""
+    local force=false
+    local all=false
+    
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            --force|-f) force=true; shift ;;
+            --all|-a) all=true; shift ;;
+            *) name="$1"; shift ;;
+        esac
+    done
+    
+    init
+    
+    local manifest_json=$(get_manifest)
+    local names=()
+    
+    if [[ -n "$name" ]]; then
+        names+=("$name")
+    else
+        while IFS= read -r n; do
+            [[ -n "$n" ]] && names+=("$n")
+        done < <(echo "$manifest_json" | jq -r '.docs | keys[]' 2>/dev/null)
+    fi
+    
+    if [[ ${#names[@]} -eq 0 ]]; then
+        echo -e "${YELLOW}No docs tracked. Use 'docs-sync add' to add some.${NC}"
+        exit 0
+    fi
+    
+    for n in "${names[@]}"; do
+        local repo_path=$(echo "$manifest_json" | jq -r ".docs[\"$n\"].path // empty" | sed "s|^~|$HOME|")
+        local branch=$(echo "$manifest_json" | jq -r ".docs[\"$n\"].branch // \"main\"")
+        local pin=$(echo "$manifest_json" | jq -r ".docs[\"$n\"].pinned_version // empty")
+        local langs=$(echo "$manifest_json" | jq -r ".docs[\"$n\"].preferred_languages | join(\",\") // \"$PREFERRED_LANGS\"")
+        
+        if [[ -z "$repo_path" || ! -d "$repo_path" ]]; then
+            echo -e "${RED}✗ '$n': Directory not found at $repo_path${NC}"
+            continue
+        fi
+        
+        if ! $force && ! $all && ! is_stale "$n"; then
+            echo -e "${GREEN}✓ '$n': Fresh${NC}"
+            continue
+        fi
+        
+        echo -e "${BLUE}↻ Updating '$n'...${NC}"
+        
+        cd "$repo_path"
+        git fetch --depth 1 origin "$branch" 2>&1 || true
+        
+        if [[ -n "$pin" ]]; then
+            git checkout "$pin" 2>&1 || true
+        else
+            git checkout FETCH_HEAD 2>&1 || git checkout "$branch" 2>&1 || true
+        fi
+        
+        # Clean up languages again
+        cleanup_languages "$repo_path" "$langs"
+        
+        # Update manifest timestamp
+        local ts=$(timestamp_now)
+        manifest_json=$(echo "$manifest_json" | jq ".docs[\"$n\"].last_fetch = \"$ts\"")
+        echo "$manifest_json" > "$MANIFEST"
+        
+        echo -e "${GREEN}✓ '$n': Updated${NC}"
+    done
+}
+
+cmd_list() {
+    local show_stale=false
+    local json_output=false
+    
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            --stale) show_stale=true; shift ;;
+            --json) json_output=true; shift ;;
+            *) shift ;;
+        esac
+    done
+    
+    init
+    
+    local manifest_json=$(get_manifest)
+    local count=$(echo "$manifest_json" | jq '.docs | length')
+    
+    if [[ "$count" -eq 0 ]]; then
+        echo -e "${YELLOW}No docs tracked. Use 'docs-sync add <name> <url>' to add some.${NC}"
+        exit 0
+    fi
+    
+    if [[ "$json_output" == true ]]; then
+        echo "$manifest_json" | jq '.docs'
+        exit 0
+    fi
+    
+    printf "${BLUE}%-12s %-35s %-8s %-12s %-12s${NC}\n" "NAME" "URL" "STATUS" "LAST_FETCH" "LANGS"
+    printf "%-12s %-35s %-8s %-12s %-12s\n" "----" "---" "------" "----------" "-----"
+    
+    while IFS= read -r name; do
+        [[ -z "$name" ]] && continue
+        
+        local url=$(echo "$manifest_json" | jq -r ".docs[\"$name\"].url")
+        local last_fetch=$(echo "$manifest_json" | jq -r ".docs[\"$name\"].last_fetch")
+        local ttl=$(echo "$manifest_json" | jq -r ".docs[\"$name\"].update_interval_hours // $DEFAULT_TTL")
+        local pin=$(echo "$manifest_json" | jq -r ".docs[\"$name\"].pinned_version // empty")
+        local langs=$(echo "$manifest_json" | jq -r ".docs[\"$name\"].preferred_languages | join(\",\") // \"$PREFERRED_LANGS\"")
+        
+        local status=""
+        local age=$(age_hours "$last_fetch" 2>/dev/null || echo "?")
+        
+        if [[ "$age" == "?" ]]; then
+            status="${YELLOW}unknown${NC}"
+        elif [[ $age -lt $ttl ]]; then
+            status="${GREEN}fresh${NC}"
+        else
+            status="${RED}stale${NC}"
+        fi
+        
+        # Skip fresh items if --stale flag
+        if $show_stale && [[ "$status" == *fresh* ]]; then
+            continue
+        fi
+        
+        local age_display="${age}h ago"
+        [[ "$age" == "?" ]] && age_display="never"
+        
+        local pin_display=""
+        [[ -n "$pin" ]] && pin_display=" ($pin)"
+        
+        printf "%-12s %-35s %-16s %-12s %-12s\n" \
+            "$name" "${url:0:35}" "$(echo -e $status)$pin_display" "$age_display" "$langs"
+    done < <(echo "$manifest_json" | jq -r '.docs | keys[]')
+}
+
+cmd_remove() {
+    local name="$1"
+    
+    if [[ -z "$name" ]]; then
+        echo -e "${RED}Usage: docs-sync remove <name>${NC}"
+        exit 1
+    fi
+    
+    local manifest_json=$(get_manifest)
+    local repo_path=$(echo "$manifest_json" | jq -r ".docs[\"$name\"].path // empty" | sed "s|^~|$HOME|")
+    
+    if [[ -z "$repo_path" ]]; then
+        echo -e "${RED}Docs '$name' not found in manifest${NC}"
+        exit 1
+    fi
+    
+    if [[ -d "$repo_path" ]]; then
+        rm -rf "$repo_path"
+    fi
+    
+    echo "$manifest_json" | jq "del(.docs[\"$name\"])" > "$MANIFEST"
+    
+    echo -e "${GREEN}✓ Removed '$name'${NC}"
+}
+
+cmd_config() {
+    local action="${1:-show}"
+    
+    case "$action" in
+        show)
+            echo -e "${BLUE}Config file: $CONFIG_FILE${NC}"
+            if [[ -f "$CONFIG_FILE" ]]; then
+                jq '.' "$CONFIG_FILE"
+            else
+                echo "(not found - using defaults)"
+            fi
+            ;;
+        edit)
+            ${EDITOR:-nano} "$CONFIG_FILE"
+            ;;
+        path)
+            echo "$CONFIG_FILE"
+            ;;
+        *)
+            echo -e "${RED}Unknown config action: $action${NC}"
+            echo "Usage: docs-sync config [show|edit|path]"
+            exit 1
+            ;;
+    esac
+}
+
+cmd_manifest() {
+    echo "$MANIFEST"
+}
+
+cmd_clean() {
+    local days=7
+    
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            --days|-d) days="$2"; shift 2 ;;
+            *) shift ;;
+        esac
+    done
+    
+    local cache_dir="$CACHE_DIR/_cache"
+    
+    if [[ -d "$cache_dir" ]]; then
+        find "$cache_dir" -type f -mtime +$days -delete 2>/dev/null
+        echo -e "${GREEN}✓ Cleaned cache older than $days days${NC}"
+    else
+        echo "No cache to clean"
+    fi
+}
+
+cmd_help() {
+    cat <<EOF
+${CYAN}docs-sync${NC} - Documentation freshness & sync manager
+
+${BLUE}Usage:${NC}
+  docs-sync <command> [options]
+
+${BLUE}Commands:${NC}
+  ${GREEN}add${NC} <name> <url>     Clone and track docs repo
+    --sparse <paths>   Comma-separated paths (default: $DEFAULT_SPARSE)
+    --branch <name>    Branch to track (default: auto-detect)
+    --pin <version>    Pin to specific tag/commit
+    --langs <codes>    Languages to keep (default: $PREFERRED_LANGS)
+
+  ${GREEN}update${NC} [name]        Update stale docs
+    --force, -f        Force update even if fresh
+    --all, -a          Update all (even fresh)
+
+  ${GREEN}list${NC}                 List tracked docs with status
+    --stale            Show only stale docs
+    --json             Output as JSON
+
+  ${GREEN}remove${NC} <name>        Remove docs entry and delete files
+
+  ${GREEN}config${NC} [show|edit|path]  Manage configuration
+
+  ${GREEN}manifest${NC}             Show manifest file path
+
+  ${GREEN}clean${NC}                Clean old cache files
+    --days, -d <n>     Delete files older than N days (default: 7)
+
+  ${GREEN}help${NC}                 Show this help
+
+${BLUE}Examples:${NC}
+  docs-sync add react https://github.com/facebook/react
+  docs-sync add nextjs https://github.com/vercel/next.js --branch dev --langs en,ru
+  docs-sync add vue https://github.com/vuejs/vue --pin v3.4.0
+  docs-sync update --stale
+  docs-sync list
+
+${BLUE}Storage:${NC}
+  Config:    ~/.config/opencode/skills/docs-sync/config.json
+  Manifest:  ~/.cache/ai_docs_sync/.manifest.json
+  Docs:      ~/.cache/ai_docs_sync/docs/
+
+${BLUE}Config options (config.json):${NC}
+  preferred_languages    ["en", "ru"]     Languages to keep after clone
+  default_sparse_paths   ["docs/", ...]   Default paths to checkout
+  default_branch         "auto"           Branch detection mode
+  default_ttl_hours      24               Hours before stale
+  language_cleanup.enabled  true          Enable language cleanup
+EOF
+}
+
+# ============================================================================
+# MAIN
+# ============================================================================
+
+main() {
+    init
+    load_config
+    
+    local cmd="${1:-help}"
+    shift || true
+    
+    case "$cmd" in
+        add) cmd_add "$@" ;;
+        update) cmd_update "$@" ;;
+        list|ls) cmd_list "$@" ;;
+        remove|rm) cmd_remove "$@" ;;
+        config) cmd_config "$@" ;;
+        manifest) cmd_manifest ;;
+        clean) cmd_clean "$@" ;;
+        help|--help|-h) cmd_help ;;
+        *)
+            echo -e "${RED}Unknown command: $cmd${NC}"
+            cmd_help
+            exit 1
+            ;;
+    esac
+}
+
+main "$@"

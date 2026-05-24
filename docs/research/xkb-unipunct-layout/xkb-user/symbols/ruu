@@ -1,0 +1,74 @@
+// Russian layout with Ukrainian and Belarusian characters via Right Alt
+// Ctrl+key always produces Latin characters (via custom xkb types)
+// Managed via stow (~/dotfiles/xkb/.config/xkb/symbols/ruu)
+
+xkb_symbols "ruu" {
+
+    include "ru(common)"
+    name[Group1]= "Russian (with Ukrainian-Belorussian layout)";
+
+    // Number row — same digits in both layouts, Ctrl+number works without changes
+    key <TLDE> { [  grave,  apostrophe,         U0301,  asciitilde  ] };
+    key <AE01> { [      1,      exclam,      division,       U2248  ] };
+    key <AE02> { [      2,    quotedbl,      currency,    infinity  ] };
+    key <AE03> { [      3,  numbersign,       section,       U20B4  ] };
+    key <AE04> { [      4,   semicolon,        dollar,    EuroSign  ] };
+    key <AE05> { [      5,     percent,        degree,    permille  ] };
+    key <AE06> { [      6,       colon,        less, lessthanequal  ] };
+    key <AE07> { [      7,    question,  greater, greaterthanequal  ] };
+    key <AE08> { [      8,    asterisk,enfilledcircbullet,multiply  ] };
+    key <AE09> { [      9,   parenleft,   bracketleft,   braceleft  ] };
+    key <AE10> { [      0,  parenright,  bracketright,  braceright  ] };
+    key <AE11> { [  minus,  underscore,        emdash,      endash  ] };
+    key <AE12> { [  equal,        plus,      notequal,   plusminus  ] };
+
+    // Row AD (QWERTYUIOP[]) — letter keys with Ctrl→Latin
+    // Level3=Ctrl (lowercase latin), Level4=Ctrl+Shift (lowercase latin, Shift preserved)
+    key <AD01> { type="ALPHABETIC_CTRL", symbols[Group1]=[ Cyrillic_shorti, Cyrillic_SHORTI, q, q ] };
+    key <AD02> { type="ALPHABETIC_CTRL", symbols[Group1]=[ Cyrillic_tse,    Cyrillic_TSE,    w, w ] };
+    key <AD06> { type="ALPHABETIC_CTRL", symbols[Group1]=[ Cyrillic_en,     Cyrillic_EN,     y, y ] };
+    key <AD08> { type="ALPHABETIC_CTRL", symbols[Group1]=[ Cyrillic_sha,    Cyrillic_SHA,    i, i ] };
+    key <AD09> { type="ALPHABETIC_CTRL", symbols[Group1]=[ Cyrillic_shcha,  Cyrillic_SHCHA,  o, o ] };
+    key <AD11> { type="ALPHABETIC_CTRL", symbols[Group1]=[ Cyrillic_ha,     Cyrillic_HA, bracketleft, bracketleft ] };
+
+    // LEVEL3_CTRL: Level5=Ctrl (lowercase), Level6=Ctrl+Shift (lowercase, Shift preserved)
+    key <AD03> { type="LEVEL3_CTRL", symbols[Group1]=[ Cyrillic_u,   Cyrillic_U,   Byelorussian_shortu,          Byelorussian_SHORTU,          e, e ] };
+    key <AD04> { type="LEVEL3_CTRL", symbols[Group1]=[ Cyrillic_ka,  Cyrillic_KA,  registered,                   registered,                   r, r ] };
+    key <AD05> { type="LEVEL3_CTRL", symbols[Group1]=[ Cyrillic_ie,  Cyrillic_IE,  Cyrillic_io,                  Cyrillic_IO,                  t, t ] };
+    key <AD07> { type="LEVEL3_CTRL", symbols[Group1]=[ Cyrillic_ghe, Cyrillic_GHE, Ukrainian_ghe_with_upturn,    Ukrainian_GHE_WITH_UPTURN,    u, u ] };
+    key <AD10> { type="LEVEL3_CTRL", symbols[Group1]=[ Cyrillic_ze,  Cyrillic_ZE,  paragraph,                    paragraph,                    p, p ] };
+    key <AD12> { type="LEVEL3_CTRL", symbols[Group1]=[ Cyrillic_hardsign, Cyrillic_HARDSIGN, Ukrainian_yi, Ukrainian_YI, bracketright, bracketright ] };
+
+    // Row AC (ASDFGHJKL;')
+    key <AC01> { type="ALPHABETIC_CTRL", symbols[Group1]=[ Cyrillic_ef, Cyrillic_EF, a, a ] };
+    key <AC03> { type="ALPHABETIC_CTRL", symbols[Group1]=[ Cyrillic_ve, Cyrillic_VE, d, d ] };
+    key <AC04> { type="ALPHABETIC_CTRL", symbols[Group1]=[ Cyrillic_a,  Cyrillic_A,  f, f ] };
+    key <AC05> { type="ALPHABETIC_CTRL", symbols[Group1]=[ Cyrillic_pe, Cyrillic_PE, g, g ] };
+    key <AC06> { type="ALPHABETIC_CTRL", symbols[Group1]=[ Cyrillic_er, Cyrillic_ER, h, h ] };
+    key <AC07> { type="ALPHABETIC_CTRL", symbols[Group1]=[ Cyrillic_o,  Cyrillic_O,  j, j ] };
+    key <AC08> { type="ALPHABETIC_CTRL", symbols[Group1]=[ Cyrillic_el, Cyrillic_EL, k, k ] };
+    key <AC09> { type="ALPHABETIC_CTRL", symbols[Group1]=[ Cyrillic_de, Cyrillic_DE, l, l ] };
+    key <AC10> { type="ALPHABETIC_CTRL", symbols[Group1]=[ Cyrillic_zhe, Cyrillic_ZHE, semicolon, semicolon ] };
+
+    key <AC02> { type="LEVEL3_CTRL", symbols[Group1]=[ Cyrillic_yeru, Cyrillic_YERU, Ukrainian_i,  Ukrainian_I,  s, s ] };
+    key <AC11> { type="LEVEL3_CTRL", symbols[Group1]=[ Cyrillic_e,    Cyrillic_E,    Ukrainian_ie, Ukrainian_IE, apostrophe, apostrophe ] };
+
+    // BKSL
+    key <BKSL> { type="LEVEL3_CTRL", symbols[Group1]=[ slash, bar, backslash, brokenbar, backslash, backslash ] };
+
+    // Row AB (ZXCVBNM,./)
+    key <AB01> { type="ALPHABETIC_CTRL", symbols[Group1]=[ Cyrillic_ya,  Cyrillic_YA,  z, z ] };
+    key <AB02> { type="ALPHABETIC_CTRL", symbols[Group1]=[ Cyrillic_che, Cyrillic_CHE, x, x ] };
+    key <AB04> { type="ALPHABETIC_CTRL", symbols[Group1]=[ Cyrillic_em,  Cyrillic_EM,  v, v ] };
+    key <AB05> { type="ALPHABETIC_CTRL", symbols[Group1]=[ Cyrillic_i,   Cyrillic_I,   b, b ] };
+
+    key <AB03> { type="LEVEL3_CTRL", symbols[Group1]=[ Cyrillic_es,       Cyrillic_ES,       copyright,          copyright,          c, c ] };
+    key <AB06> { type="LEVEL3_CTRL", symbols[Group1]=[ Cyrillic_te,       Cyrillic_TE,       trademark,          trademark,          n, n ] };
+    key <AB07> { type="LEVEL3_CTRL", symbols[Group1]=[ Cyrillic_softsign, Cyrillic_SOFTSIGN, mu,                 mu,                 m, m ] };
+    key <AB08> { type="LEVEL3_CTRL", symbols[Group1]=[ Cyrillic_be,       Cyrillic_BE,       guillemotleft,       doublelowquotemark, comma, comma ] };
+    key <AB09> { type="LEVEL3_CTRL", symbols[Group1]=[ Cyrillic_yu,       Cyrillic_YU,       guillemotright,      leftdoublequotemark, period, period ] };
+
+    key <AB10> { type="LEVEL3_CTRL", symbols[Group1]=[ period, comma, slash, ellipsis, slash, slash ] };
+
+    include "level3(ralt_switch)"
+};

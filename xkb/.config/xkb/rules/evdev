@@ -1,0 +1,7 @@
+// Custom xkb rules: include system rules + add user layout(s)
+// Managed via stow (~/dotfiles/xkb/.config/xkb/rules/evdev)
+
+! include /usr/share/X11/xkb/rules/evdev
+
+! layout = symbols
+  ruu = +ruu(ruu)

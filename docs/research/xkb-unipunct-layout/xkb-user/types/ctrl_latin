@@ -1,0 +1,40 @@
+// Ctrl→Latin types for Russian layout
+// When Ctrl is held, keys produce Latin (Group1-equivalent) characters
+// while preserving the Ctrl modifier for applications.
+//
+// Lock removed: CapsLock is used for group toggle (grp:caps_toggle),
+// not for Caps Lock. Lock modifier should not affect these types.
+
+partial xkb_types "ctrl_latin" {
+
+    type "ALPHABETIC_CTRL" {
+        modifiers = Shift+Control;
+
+        map[None] = Level1;
+        map[Shift] = Level2;
+        map[Control] = Level3;
+        map[Shift+Control] = Level4;
+
+        preserve[Control] = Control;
+        preserve[Shift+Control] = Shift+Control;
+    };
+
+    type "LEVEL3_CTRL" {
+        modifiers = Shift+LevelThree+Control;
+
+        map[None] = Level1;
+        map[Shift] = Level2;
+        map[LevelThree] = Level3;
+        map[Shift+LevelThree] = Level4;
+        map[Control] = Level5;
+        map[Shift+Control] = Level6;
+        map[Control+LevelThree] = Level5;
+        map[Shift+Control+LevelThree] = Level6;
+
+        preserve[Control] = Control;
+        preserve[Shift+Control] = Shift+Control;
+        preserve[Control+LevelThree] = Control;
+        preserve[Shift+Control+LevelThree] = Shift+Control;
+    };
+
+};

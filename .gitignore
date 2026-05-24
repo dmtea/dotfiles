@@ -1,0 +1,46 @@
+# Sisyphus working files
+.sisyphus/
+
+# Bootstrap config (contains personal data)
+scripts/bootstrap.conf
+
+# Bootstrap state markers
+.state/
+
+# Archives
+*.tar.gz
+*.deb
+
+# Logs
+*.log
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Editor files
+*.swp
+*.swo
+*.orig
+*~
+.vscode/
+.idea/
+
+# Secrets
+.env
+.env.*
+*.pem
+*.key
+credentials.json
+
+# Runtime (stow packages)
+plugins/
+lazy-lock.json
+auth.json
+
+# Bootstrap state and config
+scripts/bootstrap.conf
+bootstrap.conf
+
+# Backups
+*.bak

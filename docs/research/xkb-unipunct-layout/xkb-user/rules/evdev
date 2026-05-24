@@ -1,0 +1,11 @@
+// Custom xkb rules: include system rules + add user variant
+// Managed via stow (~/dotfiles/xkb/.config/xkb/rules/evdev)
+// %S resolves to system xkb rules directory (libxkbcommon)
+
+! include %S/evdev
+
+! variant = symbols
+  ruu = +ruu(ruu)
+
+! option = types
+  ctrl_latin = +ctrl_latin(ctrl_latin)
