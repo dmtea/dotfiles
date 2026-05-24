@@ -72,7 +72,7 @@ export STOP_ON_ERROR="${STOP_ON_ERROR:-0}"
 LOG_FILE="/tmp/bootstrap-$(date +%Y%m%d-%H%M%S).log"
 exec > >(tee -a "$LOG_FILE") 2>&1
 
-echo "=== Bootstrap — Pop!_OS / Ubuntu 24.04 (amd64) ==="
+echo "=== Bootstrap — Pop!_OS / Ubuntu 24.04+ (amd64) ==="
 echo "Log: $LOG_FILE"
 
 ALL_MODULES=(00-preflight 01-system-base 02-terminal-fonts 03-shell 04-multiplexer 05-editor 06-languages 07-infrastructure 08-secrets-auth 09-dotfiles 10-summary)

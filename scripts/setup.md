@@ -14,6 +14,12 @@ Preflight module (`00-preflight.sh`) verifies these automatically.
 ## Quick Start
 
 ```bash
+curl -fsSL https://raw.githubusercontent.com/dmtea/dotfiles/main/install.sh | bash
+```
+
+Or manually:
+
+```bash
 cd ~/dotfiles/scripts/
 cp bootstrap.conf.example bootstrap.conf
 # Edit bootstrap.conf with your name, email, BT devices

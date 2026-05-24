@@ -19,8 +19,9 @@ if ! grep -qE "^ID=(ubuntu|pop)" /etc/os-release 2>/dev/null; then
 fi
 
 VERSION_ID=$(grep "^VERSION_ID=" /etc/os-release | cut -d'"' -f2)
-if [[ "$VERSION_ID" != "24.04" ]]; then
-    log_error "This script is for 24.04 only. Detected: ${VERSION_ID}"
+VERSION_MAJOR="${VERSION_ID%%.*}"
+if [[ "$VERSION_MAJOR" -lt 24 ]]; then
+    log_error "Ubuntu/Pop!_OS 24.04+ is required. Detected: ${VERSION_ID}"
     exit 1
 fi
 

@@ -6,8 +6,9 @@ GNU Stow packages for Ubuntu 24.04+ (including Pop!_OS) laptop + bootstrap scrip
 
 ```
 ~/dotfiles/               ← clone here, stow root
+├── install.sh            ← one-liner entry point (curl | bash)
 ├── scripts/
-│   ├── bootstrap.sh      ← full machine provisioning (9 steps)
+│   ├── bootstrap.sh      ← full machine provisioning (10 modules)
 │   ├── setup.md          ← walkthrough and troubleshooting
 │   └── bin/              ← user scripts (installed to ~/.local/bin)
 │       └── bt-toggle.sh
@@ -23,15 +24,25 @@ GNU Stow packages for Ubuntu 24.04+ (including Pop!_OS) laptop + bootstrap scrip
 └── archive/              ← archived configs (not used in bootstrap)
 ```
 
-## Bootstrap
+## Install
 
 ```bash
-cd ~/dotfiles/scripts/
-chmod +x bootstrap.sh
-./bootstrap.sh
+curl -fsSL https://raw.githubusercontent.com/dmtea/dotfiles/main/install.sh | bash
 ```
 
+This clones the repo, creates a config from the example, and runs the full bootstrap. You will be prompted for `GIT_NAME` and `GIT_EMAIL` if not set in `bootstrap.conf`.
+
 All output is logged to `/tmp/bootstrap-<timestamp>.log`.
+
+### Manual (alternative)
+
+```bash
+git clone https://github.com/dmtea/dotfiles.git ~/dotfiles
+cd ~/dotfiles/scripts/
+cp bootstrap.conf.example bootstrap.conf
+# edit bootstrap.conf with your name/email
+./bootstrap.sh
+```
 
 ## What Gets Installed
 
@@ -57,7 +68,7 @@ Also installs custom keyboard layout `ruu` (via stow package, not system files) 
 
 | Tool | Version | Purpose |
 |------|---------|---------|
-| kitty | 0.46.2 | GPU-accelerated terminal emulator |
+| kitty | 0.47.0 | GPU-accelerated terminal emulator |
 | FiraCode Nerd Font | v3.4.0 | Programming font with ligatures + icons |
 | FiraMono Nerd Font | v3.4.0 | Monospace variant |
 
@@ -80,14 +91,14 @@ Includes COSMIC DE integration: Super+T → kitty, xdg-mime defaults.
 
 | Tool | Version | Purpose |
 |------|---------|---------|
-| tmux | 3.6a | Terminal multiplexer (static binary) |
+| tmux | 3.6b | Terminal multiplexer (static binary) |
 | TPM | latest | Tmux Plugin Manager |
 
 ### Editor (Step 5)
 
 | Tool | Version | Purpose |
 |------|---------|---------|
-| Neovim | v0.12.1 | Text editor (official tarball to /opt) |
+| Neovim | v0.12.2 | Text editor (official tarball to /opt) |
 
 ### Languages & Runtimes (Step 6)
 
@@ -109,7 +120,7 @@ Includes COSMIC DE integration: Super+T → kitty, xdg-mime defaults.
 
 | Tool | Version | Purpose |
 |------|---------|---------|
-| SOPS | 3.12.2 | Secrets encryption (dpkg) |
+| SOPS | 3.13.1 | Secrets encryption (dpkg) |
 | age | 1.3.1 | File encryption (pinned binary) |
 | Bitwarden CLI | latest | Password manager CLI (npm) |
 | gh CLI | latest | GitHub CLI (official apt repo) |
