@@ -1,10 +1,10 @@
-# Bootstrap Guide — Pop!_OS / Ubuntu 24.04
+# Bootstrap Guide — Ubuntu 24.04+ (including Pop!_OS)
 
-Modular, idempotent bootstrap for fresh Pop!_OS 24.04 or Ubuntu 24.04 installations.
+Modular, idempotent bootstrap for fresh Ubuntu 24.04+ (including Pop!_OS) installations.
 
 ## Prerequisites
 
-- **OS**: Pop!_OS 24.04 or Ubuntu 24.04
+- **OS**: Ubuntu 24.04+ (including Pop!_OS)
 - **Architecture**: amd64 (x86_64)
 - **Internet**: Required
 - **Sudo access**: Required

@@ -7,7 +7,7 @@
 
 ## Project Overview
 
-Dotfiles repo for Pop!_OS / Ubuntu 24.04 laptop — stow-managed configs + bootstrap provisioning script.
+Dotfiles repo for Ubuntu 24.04+ (including Pop!_OS) laptop — stow-managed configs + bootstrap provisioning script.
 - Stow packages at repo root, bootstrap in `scripts/`
 - Version-locked to 24.04 (Noble)
 - Self-contained, idempotent bootstrap script

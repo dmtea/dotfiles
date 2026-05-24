@@ -1,6 +1,6 @@
 # Dotfiles
 
-GNU Stow packages for Pop!_OS / Ubuntu 24.04 laptop + bootstrap script.
+GNU Stow packages for Ubuntu 24.04+ (including Pop!_OS) laptop + bootstrap script.
 
 ## Structure
 
@@ -143,7 +143,7 @@ After the script finishes:
 
 ## Requirements
 
-- **OS**: Pop!_OS or Ubuntu 24.04
+- **OS**: Ubuntu 24.04+ (including Pop!_OS)
 - **Architecture**: amd64 (x86_64)
 - **Internet**: Required
 - **Sudo**: Required (script calls sudo internally — do NOT run as root)
