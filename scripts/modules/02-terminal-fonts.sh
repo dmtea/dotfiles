@@ -18,8 +18,13 @@ else
 fi
 
 mkdir -p ~/.local/share/applications
-cp "$KITTY_DIR/share/applications/"*.desktop ~/.local/share/applications/ 2>/dev/null
-update-desktop-database ~/.local/share/applications 2>/dev/null || true
+if compgen -G "$KITTY_DIR/share/applications/*.desktop" >/dev/null 2>&1; then
+    cp "$KITTY_DIR"/share/applications/*.desktop ~/.local/share/applications/
+    log_info "kitty desktop files installed"
+fi
+if command -v update-desktop-database >/dev/null 2>&1; then
+    update-desktop-database ~/.local/share/applications 2>&1 || log_warn "update-desktop-database failed (non-critical)"
+fi
 
 add_to_path "$KITTY_DIR/bin"
 
@@ -37,7 +42,7 @@ if command -v cosmic-settings >/dev/null 2>&1 || dpkg -l cosmic-session >/dev/nu
 EOF
     fi
 
-    sed -i 's/"cosmic-term"/"kitty"/' "$SHORTCUTS_DIR/system_actions" 2>/dev/null
+    sed -i 's/"cosmic-term"/"kitty"/' "$SHORTCUTS_DIR/system_actions" 2>&1 || log_warn "COSMIC shortcut file not found"
 
     cat > "$SHORTCUTS_DIR/custom" << 'RON'
 (

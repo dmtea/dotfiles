@@ -84,8 +84,11 @@ install_apt_packages() {
 
     if [ ${#to_install[@]} -gt 0 ]; then
         echo "  Installing: ${to_install[*]}"
-        sudo apt update -qq
-        sudo apt install -y "${to_install[@]}"
+        sudo apt update -qq 2>&1 || log_warn "apt update failed"
+        sudo apt install -y "${to_install[@]}" 2>&1 || {
+            log_error "Failed to install: ${to_install[*]}"
+            return 1
+        }
     else
         echo "  All apt packages already installed"
     fi

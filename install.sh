@@ -65,4 +65,4 @@ fi
 
 echo "Starting bootstrap..."
 chmod +x bootstrap.sh
-exec ./bootstrap.sh "$@"
+exec ./bootstrap.sh "$@" < /dev/tty

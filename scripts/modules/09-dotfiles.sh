@@ -40,10 +40,14 @@ STOW_PACKAGES="zsh kitty opencode nvim tmux"
 for pkg in $STOW_PACKAGES; do
     if [ -d "$DOTFILES_DIR/$pkg" ]; then
         cd "$DOTFILES_DIR"
-        if stow "$pkg" 2>/dev/null; then
+        if stow "$pkg" 2>&1; then
             log_info "stowed: $pkg"
         else
-            stow --adopt "$pkg" 2>/dev/null && log_info "stowed (adopted): $pkg" || log_warn "stow $pkg failed"
+            if stow --adopt "$pkg" 2>&1; then
+                log_info "stowed (adopted): $pkg"
+            else
+                log_warn "stow $pkg failed — check for conflicts"
+            fi
         fi
     fi
 done
@@ -55,10 +59,12 @@ source "$MODULES_DIR/setup-keybindings.sh"
 
 if [ -d "$HOME/.config/tmux/plugins/tpm" ] && [ -L "$HOME/.config/tmux/tmux.conf" ]; then
     log_info "Installing tmux plugins..."
-    TMUX_PLUGIN_MANAGER_PATH="$HOME/.config/tmux/plugins/" \
-        "$HOME/.config/tmux/plugins/tpm/bin/install_plugins" 2>/dev/null \
-        && log_info "tmux plugins installed" \
-        || log_warn "tmux plugins will install on first launch (prefix+I)"
+    if TMUX_PLUGIN_MANAGER_PATH="$HOME/.config/tmux/plugins/" \
+        "$HOME/.config/tmux/plugins/tpm/bin/install_plugins" 2>&1; then
+        log_info "tmux plugins installed"
+    else
+        log_warn "tmux plugins will install on first launch (prefix+I)"
+    fi
 fi
 
 if [ -d "$HOME/.config/xkb/symbols" ]; then
