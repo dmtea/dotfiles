@@ -96,7 +96,7 @@ else
     MODULES_TO_RUN=()
     for mod in "${ALL_MODULES[@]}"; do
         skip=false
-        for skipped in "${SKIP_MODULES[@]:-}"; do
+        for skipped in "${SKIP_MODULES[@]+"${SKIP_MODULES[@]}"}"; do
             [[ "$mod" == *"$skipped"* ]] && skip=true
         done
         [ "$skip" = true ] && continue
