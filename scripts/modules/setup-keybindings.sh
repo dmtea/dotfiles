@@ -14,8 +14,8 @@ if [ ! -f "$BT_CONF" ]; then
     HEADPHONES_MAC="${BT_HEADPHONES:-}"
     MOUSE_MAC="${BT_MOUSE:-}"
 
-    if command -v bluetoothctl >/dev/null 2>&1; then
-        PAIRED=$(bluetoothctl devices Paired 2>/dev/null || true)
+    if systemctl is-active --quiet bluetooth 2>/dev/null; then
+        PAIRED=$(timeout 3 bluetoothctl devices Paired 2>/dev/null || true)
 
         if [ -n "$PAIRED" ]; then
             echo ""
