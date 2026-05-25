@@ -20,7 +20,14 @@ fi
 mkdir -p ~/.local/share/applications
 if compgen -G "$KITTY_DIR/share/applications/*.desktop" >/dev/null 2>&1; then
     cp "$KITTY_DIR"/share/applications/*.desktop ~/.local/share/applications/
+    sed -i "s|^Exec=kitty|Exec=$KITTY_DIR/bin/kitty|" ~/.local/share/applications/kitty*.desktop
+    sed -i "s|^TryExec=kitty|TryExec=$KITTY_DIR/bin/kitty|" ~/.local/share/applications/kitty*.desktop
+    sed -i "s|^Icon=.*|Icon=$KITTY_DIR/share/icons/hicolor/256x256/apps/kitty.png|" ~/.local/share/applications/kitty*.desktop
     log_info "kitty desktop files installed"
+fi
+if [ -d "$KITTY_DIR/share/icons" ]; then
+    cp -r "$KITTY_DIR/share/icons" ~/.local/share/
+    log_info "kitty icons installed"
 fi
 if command -v update-desktop-database >/dev/null 2>&1; then
     update-desktop-database ~/.local/share/applications 2>&1 || log_warn "update-desktop-database failed (non-critical)"

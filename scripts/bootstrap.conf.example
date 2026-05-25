@@ -5,6 +5,9 @@
 GIT_NAME=""
 GIT_EMAIL=""
 
+# Vaultwarden (set URL to auto-configure during bootstrap)
+VW_URL=""
+
 # Bluetooth device MAC addresses (leave empty to auto-detect or skip)
 BT_HEADPHONES=""
 BT_MOUSE=""

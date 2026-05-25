@@ -149,6 +149,8 @@ run_module() {
         export PATH="$(cat "$STATE_DIR/saved-path")"
     fi
 
+    [ -f "$STATE_DIR/vw-git-identity" ] && source "$STATE_DIR/vw-git-identity"
+
     if [ $rc -eq 0 ]; then
         SUCCEEDED+=("$module")
         echo "=== Module $module: OK ==="

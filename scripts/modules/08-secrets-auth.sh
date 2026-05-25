@@ -67,4 +67,64 @@ else
     log_info "opencode installed: $($HOME/.opencode/bin/opencode --version 2>/dev/null || echo 'installed')"
 fi
 
+# --- Vaultwarden login (optional) ---
+if check_cmd bw; then
+    BW_STATUS="$(bw status 2>/dev/null | grep -o '"status":"[^"]*"' | head -1 | cut -d'"' -f4 || echo 'unknown')"
+
+    if [ "$BW_STATUS" = "unauthenticated" ] && [ -z "${VW_URL:-}" ]; then
+        echo ""
+        echo "  Vaultwarden can store your git identity, SSH keys, and secrets."
+        if ask_yesno "Configure Vaultwarden now?" "n"; then
+            VW_URL="$(ask_value "Vaultwarden URL (e.g. https://vault.example.com)")"
+        fi
+    fi
+
+    if [ -n "${VW_URL:-}" ] && [ "$BW_STATUS" != "authenticated" ]; then
+        log_info "Configuring Bitwarden for: $VW_URL"
+        bw config server "$VW_URL" 2>&1 || log_warn "bw config server failed"
+
+        echo "  You will need your Vaultwarden email and master password."
+        BW_EMAIL="$(ask_value "Vaultwarden email")"
+        if [ -n "$BW_EMAIL" ]; then
+            log_info "Logging in to Vaultwarden..."
+            if BW_OUTPUT="$(bw login "$BW_EMAIL" 2>&1)"; then
+                BW_SESSION="$(echo "$BW_OUTPUT" | grep -oP '(?<=--session ).+' | tr -d '"' || true)"
+                if [ -n "$BW_SESSION" ]; then
+                    export BW_SESSION
+                    log_info "Logged in to Vaultwarden"
+
+                    GIT_ITEM="$(bw get item "git-identity" 2>/dev/null || true)"
+                    if [ -n "$GIT_ITEM" ]; then
+                        VW_GIT_NAME="$(echo "$GIT_ITEM" | jq -r '.name // empty' 2>/dev/null || true)"
+                        VW_GIT_EMAIL="$(echo "$GIT_ITEM" | jq -r '.login.username // empty' 2>/dev/null || true)"
+                        if [ -n "$VW_GIT_NAME" ]; then
+                            export GIT_NAME="$VW_GIT_NAME"
+                            log_info "Git name from Vaultwarden: $GIT_NAME"
+                        fi
+                        if [ -n "$VW_GIT_EMAIL" ]; then
+                            export GIT_EMAIL="$VW_GIT_EMAIL"
+                            log_info "Git email from Vaultwarden: $GIT_EMAIL"
+                        fi
+                    fi
+
+                    echo "$BW_SESSION" > "$STATE_DIR/bw-session"
+
+                    if [ -n "${GIT_NAME:-}" ] || [ -n "${GIT_EMAIL:-}" ]; then
+                        cat > "$STATE_DIR/vw-git-identity" <<GITEOF
+GIT_NAME="${GIT_NAME:-}"
+GIT_EMAIL="${GIT_EMAIL:-}"
+GITEOF
+                    fi
+                else
+                    log_warn "Login succeeded but session key not found"
+                fi
+            else
+                log_warn "Vaultwarden login failed: $BW_OUTPUT"
+            fi
+        fi
+    elif [ "$BW_STATUS" = "authenticated" ]; then
+        log_info "Bitwarden already authenticated"
+    fi
+fi
+
 write_marker "08-secrets-auth"
