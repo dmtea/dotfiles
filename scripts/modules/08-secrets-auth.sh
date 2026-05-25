@@ -86,9 +86,10 @@ if check_cmd bw; then
         echo "  You will need your Vaultwarden email and master password."
         BW_EMAIL="$(ask_value "Vaultwarden email")"
         if [ -n "$BW_EMAIL" ]; then
-            log_info "Logging in to Vaultwarden..."
-            if BW_OUTPUT="$(bw login "$BW_EMAIL" 2>&1)"; then
-                BW_SESSION="$(echo "$BW_OUTPUT" | grep -oP '(?<=--session ).+' | tr -d '"' || true)"
+            BW_MASTER_PASS="$(ask_value "Master password")"
+            if [ -n "$BW_MASTER_PASS" ]; then
+                log_info "Logging in to Vaultwarden..."
+                BW_SESSION="$(BW_MASTER_PASSWORD="$BW_MASTER_PASS" bw login "$BW_EMAIL" --passwordenv BW_MASTER_PASSWORD --raw 2>&1)" || true
                 if [ -n "$BW_SESSION" ]; then
                     export BW_SESSION
                     log_info "Logged in to Vaultwarden"
@@ -116,10 +117,9 @@ GIT_EMAIL="${GIT_EMAIL:-}"
 GITEOF
                     fi
                 else
-                    log_warn "Login succeeded but session key not found"
+                    log_warn "Vaultwarden login failed — check email and password"
                 fi
-            else
-                log_warn "Vaultwarden login failed: $BW_OUTPUT"
+                unset BW_MASTER_PASS
             fi
         fi
     elif [ "$BW_STATUS" = "authenticated" ]; then
