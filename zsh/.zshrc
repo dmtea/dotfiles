@@ -102,6 +102,8 @@ alias c='clear'
 export EDITOR="nvim"
 export SUDO_EDITOR="$EDITOR"
 
+[[ -f ~/.env.local ]] && source ~/.env.local
+
 [ -f ~/.fzf.zsh ] && source ~/.fzf.zsh
 [[ -f ~/.config/opencode/path.zsh ]] && source ~/.config/opencode/path.zsh
 [[ -f ~/.config/opencode/secrets.env ]] && source ~/.config/opencode/secrets.env

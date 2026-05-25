@@ -118,13 +118,18 @@ if check_cmd bw; then
                 VW_SSH_ITEMS="$(echo "$VW_ITEMS" | jq -s -r '.[] | select(.type==5)')"
 
                 if [ -n "$VW_ENV_ITEMS" ]; then
+                    VW_ENV_COUNT="$(echo "$VW_ENV_ITEMS" | jq -s 'length')"
                     echo ""
-                    echo "  Env vars from collection '${VW_COLLECTION:-shared}':"
-                    echo "$VW_ENV_ITEMS" | jq -r '. | "    \(.name) = \(.notes)"'
+                    echo "  Found ${VW_ENV_COUNT} env var(s) from collection '${VW_COLLECTION:-shared}':"
+                    echo "$VW_ENV_ITEMS" | jq -r '. | "    \(.name) = ****"'
                     echo ""
                     if ask_yesno "Apply these values?" "y"; then
+                        # Temp file for bootstrap-internal passing (exported vars)
                         VW_ENV_FILE="$STATE_DIR/vw-data"
                         : > "$VW_ENV_FILE"
+                        # Persistent file for post-login shell
+                        VW_ENV_PERSIST="$HOME/.env.local"
+                        : > "$VW_ENV_PERSIST"
                         echo "$VW_ENV_ITEMS" | jq -r '.name + "\t" + .notes' | while IFS=$'\t' read -r vw_name vw_value; do
                             [ -z "$vw_value" ] && continue
                             case "$vw_name" in
@@ -132,8 +137,20 @@ if check_cmd bw; then
                                 GIT_USER_EMAIL) export GIT_EMAIL="$vw_value" ;;
                                 *) export "$vw_name=$vw_value" 2>/dev/null || true ;;
                             esac
-                            echo "${vw_name}=\"${vw_value}\"" >> "$VW_ENV_FILE"
-                            log_info "$vw_name = $vw_value"
+                            # Bootstrap-internal (subshell bridge)
+                            echo "export ${vw_name}=\"${vw_value}\"" >> "$VW_ENV_FILE"
+                            # Persistent (survives logout)
+                            echo "export ${vw_name}=\"${vw_value}\"" >> "$VW_ENV_PERSIST"
+                            log_info "$vw_name set (value hidden)"
+                        done
+                        chmod 600 "$VW_ENV_PERSIST"
+                        log_info "Env vars persisted to $VW_ENV_PERSIST"
+
+                        for rc in ~/.profile ~/.zprofile; do
+                            touch "$rc"
+                            if ! grep -qF '.env.local' "$rc" 2>/dev/null; then
+                                echo '[ -f ~/.env.local ] && . ~/.env.local' >> "$rc"
+                            fi
                         done
                     fi
                 fi
