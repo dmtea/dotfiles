@@ -145,11 +145,8 @@ run_module() {
     )
     local rc=$?
 
-    if [ -f "$STATE_DIR/saved-path" ]; then
-        export PATH="$(cat "$STATE_DIR/saved-path")"
-    fi
-
-    [ -f "$STATE_DIR/vw-git-identity" ] && source "$STATE_DIR/vw-git-identity"
+    [ -f "$STATE_DIR/saved-path" ] && export PATH="$(cat "$STATE_DIR/saved-path")"
+    [ -f "$STATE_DIR/vw-data" ] && source "$STATE_DIR/vw-data"
 
     if [ $rc -eq 0 ]; then
         SUCCEEDED+=("$module")

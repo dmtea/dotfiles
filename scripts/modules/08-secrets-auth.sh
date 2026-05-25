@@ -83,43 +83,36 @@ if check_cmd bw; then
         log_info "Configuring Bitwarden for: $VW_URL"
         bw config server "$VW_URL" 2>&1 || log_warn "bw config server failed"
 
-        echo "  You will need your Vaultwarden email and master password."
         BW_EMAIL="$(ask_value "Vaultwarden email")"
         if [ -n "$BW_EMAIL" ]; then
-            BW_MASTER_PASS="$(ask_secret "Master password")"
-            if [ -n "$BW_MASTER_PASS" ]; then
-                log_info "Logging in to Vaultwarden..."
-                BW_SESSION="$(BW_MASTER_PASSWORD="$BW_MASTER_PASS" bw login "$BW_EMAIL" --passwordenv BW_MASTER_PASSWORD --raw 2>&1)" || true
-                if [ -n "$BW_SESSION" ]; then
-                    export BW_SESSION
-                    log_info "Logged in to Vaultwarden"
+            log_info "Logging in to Vaultwarden..."
+            BW_SESSION="$(bw login "$BW_EMAIL" --raw 2>&1)" || true
+            if [ -n "$BW_SESSION" ] && ! echo "$BW_SESSION" | jq -e '.statusCode' >/dev/null 2>&1; then
+                export BW_SESSION
+                log_info "Logged in to Vaultwarden"
 
-                    GIT_ITEM="$(bw get item "git-identity" 2>/dev/null || true)"
-                    if [ -n "$GIT_ITEM" ]; then
-                        VW_GIT_NAME="$(echo "$GIT_ITEM" | jq -r '.name // empty' 2>/dev/null || true)"
-                        VW_GIT_EMAIL="$(echo "$GIT_ITEM" | jq -r '.login.username // empty' 2>/dev/null || true)"
-                        if [ -n "$VW_GIT_NAME" ]; then
-                            export GIT_NAME="$VW_GIT_NAME"
-                            log_info "Git name from Vaultwarden: $GIT_NAME"
-                        fi
-                        if [ -n "$VW_GIT_EMAIL" ]; then
-                            export GIT_EMAIL="$VW_GIT_EMAIL"
-                            log_info "Git email from Vaultwarden: $GIT_EMAIL"
-                        fi
+                for VW_ITEM in GIT_USER_NAME GIT_USER_EMAIL BT_HEADPHONES_MAC BT_MOUSE_MAC; do
+                    VW_NOTES="$(bw get item "$VW_ITEM" 2>/dev/null | jq -r '.notes // empty' 2>/dev/null || true)"
+                    if [ -n "$VW_NOTES" ]; then
+                        case "$VW_ITEM" in
+                            GIT_USER_NAME) export GIT_NAME="$VW_NOTES"; log_info "Git name from VW: $GIT_NAME" ;;
+                            GIT_USER_EMAIL) export GIT_EMAIL="$VW_NOTES"; log_info "Git email from VW: $GIT_EMAIL" ;;
+                            BT_HEADPHONES_MAC) export BT_HEADPHONES="$VW_NOTES"; log_info "BT headphones from VW: $BT_HEADPHONES" ;;
+                            BT_MOUSE_MAC) export BT_MOUSE="$VW_NOTES"; log_info "BT mouse from VW: $BT_MOUSE" ;;
+                        esac
                     fi
+                done
 
-                    echo "$BW_SESSION" > "$STATE_DIR/bw-session"
+                echo "$BW_SESSION" > "$STATE_DIR/bw-session"
 
-                    if [ -n "${GIT_NAME:-}" ] || [ -n "${GIT_EMAIL:-}" ]; then
-                        cat > "$STATE_DIR/vw-git-identity" <<GITEOF
+                cat > "$STATE_DIR/vw-data" <<VWEOF
 GIT_NAME="${GIT_NAME:-}"
 GIT_EMAIL="${GIT_EMAIL:-}"
-GITEOF
-                    fi
-                else
-                    log_warn "Vaultwarden login failed — check email and password"
-                fi
-                unset BW_MASTER_PASS
+BT_HEADPHONES="${BT_HEADPHONES:-}"
+BT_MOUSE="${BT_MOUSE:-}"
+VWEOF
+            else
+                log_warn "Vaultwarden login failed — check email and password"
             fi
         fi
     elif [ "$BW_STATUS" = "authenticated" ]; then
