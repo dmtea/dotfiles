@@ -83,37 +83,55 @@ if check_cmd bw; then
                 log_info "Logged in to Vaultwarden"
                 echo "$BW_SESSION" > "$STATE_DIR/bw-session"
 
-                VW_ENV_ITEMS="$(bw list items --session "$BW_SESSION" 2>/dev/null \
-                    | jq -r '.[] | select(.type==2 and (.name | test("^[A-Z_]+$")))' 2>/dev/null || true)"
+                VW_COLLECTIONS="$(bw list collections --session "$BW_SESSION" 2>/dev/null | jq -r '.[] | .name' 2>/dev/null || true)"
+                if [ -n "$VW_COLLECTIONS" ]; then
+                    echo ""
+                    echo "  Available collections:"
+                    echo "$VW_COLLECTIONS" | while read -r col; do echo "    - $col"; done
+                    VW_COLLECTION="$(ask_value "Select collection for this machine")"
+                fi
+
+                VW_COLLECTION_ID=""
+                if [ -n "${VW_COLLECTION:-}" ]; then
+                    VW_COLLECTION_ID="$(bw list collections --session "$BW_SESSION" 2>/dev/null \
+                        | jq -r ".[] | select(.name==\"$VW_COLLECTION\") | .id" 2>/dev/null || true)"
+                fi
+
+                VW_ALL_ITEMS="$(bw list items --session "$BW_SESSION" 2>/dev/null || true)"
+
+                if [ -n "$VW_COLLECTION_ID" ]; then
+                    VW_ITEMS="$(echo "$VW_ALL_ITEMS" | jq -r ".[] | select(.collectionIds[]? == \"$VW_COLLECTION_ID\")" 2>/dev/null || true)"
+                else
+                    VW_ITEMS="$(echo "$VW_ALL_ITEMS" | jq -r '.[] | select(.collectionIds | length == 0)' 2>/dev/null || true)"
+                fi
+
+                VW_ENV_ITEMS="$(echo "$VW_ITEMS" | jq -r '. | select(.type==2 and (.name | test("^[A-Z_]")))')"
+                VW_SSH_ITEMS="$(echo "$VW_ITEMS" | jq -s -r '.[] | select(.type==5)')"
 
                 if [ -n "$VW_ENV_ITEMS" ]; then
                     echo ""
-                    echo "  Found in Vaultwarden:"
+                    echo "  Env vars from collection '${VW_COLLECTION:-shared}':"
                     echo "$VW_ENV_ITEMS" | jq -r '. | "    \(.name) = \(.notes)"'
                     echo ""
                     if ask_yesno "Apply these values?" "y"; then
-                        VW_DATA=""
+                        VW_ENV_FILE="$STATE_DIR/vw-data"
+                        : > "$VW_ENV_FILE"
                         echo "$VW_ENV_ITEMS" | jq -r '.name + "\t" + .notes' | while IFS=$'\t' read -r vw_name vw_value; do
                             [ -z "$vw_value" ] && continue
                             case "$vw_name" in
-                                GIT_USER_NAME) export GIT_NAME="$vw_value"; log_info "GIT_NAME=$GIT_NAME" ;;
-                                GIT_USER_EMAIL) export GIT_EMAIL="$vw_value"; log_info "GIT_EMAIL=$GIT_EMAIL" ;;
-                                *) export "$vw_name=$vw_value" 2>/dev/null; log_info "$vw_name set" ;;
+                                GIT_USER_NAME) export GIT_NAME="$vw_value" ;;
+                                GIT_USER_EMAIL) export GIT_EMAIL="$vw_value" ;;
+                                *) export "$vw_name=$vw_value" 2>/dev/null || true ;;
                             esac
-                            VW_DATA="${VW_DATA:+$VW_DATA\n}${vw_name}=\"${vw_value}\""
+                            echo "${vw_name}=\"${vw_value}\"" >> "$VW_ENV_FILE"
+                            log_info "$vw_name = $vw_value"
                         done
-
-                        VW_ENV_FILE="$STATE_DIR/vw-data"
-                        : > "$VW_ENV_FILE"
-                        echo "$VW_ENV_ITEMS" | jq -r '.name + "=\"" + .notes + "\""' >> "$VW_ENV_FILE"
                     fi
                 fi
 
-                VW_SSH_ITEMS="$(bw list items --session "$BW_SESSION" 2>/dev/null \
-                    | jq -r '.[] | select(.type==5)' 2>/dev/null || true)"
                 if [ -n "$VW_SSH_ITEMS" ]; then
                     VW_SSH_COUNT="$(echo "$VW_SSH_ITEMS" | jq -s 'length')"
-                    log_info "Found $VW_SSH_COUNT SSH key(s) in Vaultwarden"
+                    log_info "Found $VW_SSH_COUNT SSH key(s) in collection '${VW_COLLECTION:-shared}'"
                 fi
             else
                 log_warn "Vaultwarden login failed — check email and password"
