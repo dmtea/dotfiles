@@ -129,6 +129,16 @@ ask_value() {
     echo "${result:-$default}"
 }
 
+ask_secret() {
+    local prompt="$1"
+    local result
+
+    echo -n "  ${prompt}: " >&2
+    read -rs result
+    echo "" >&2
+    echo "$result"
+}
+
 ask_yesno() {
     local prompt="$1"
     local default="${2:-n}"

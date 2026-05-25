@@ -86,7 +86,7 @@ if check_cmd bw; then
         echo "  You will need your Vaultwarden email and master password."
         BW_EMAIL="$(ask_value "Vaultwarden email")"
         if [ -n "$BW_EMAIL" ]; then
-            BW_MASTER_PASS="$(ask_value "Master password")"
+            BW_MASTER_PASS="$(ask_secret "Master password")"
             if [ -n "$BW_MASTER_PASS" ]; then
                 log_info "Logging in to Vaultwarden..."
                 BW_SESSION="$(BW_MASTER_PASSWORD="$BW_MASTER_PASS" bw login "$BW_EMAIL" --passwordenv BW_MASTER_PASSWORD --raw 2>&1)" || true
