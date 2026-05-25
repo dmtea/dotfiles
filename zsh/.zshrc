@@ -115,3 +115,35 @@ if [ -d "$HOME/.bun" ]; then
     export BUN_INSTALL="$HOME/.bun"
     export PATH="$BUN_INSTALL/bin:$PATH"
 fi
+
+bwget() {
+    if [[ $# -lt 1 ]]; then
+        echo "Usage: bwget <item-name> [collection-id]" >&2
+        return 1
+    fi
+    [[ -z "${BW_SESSION:-}" ]] && { echo "Error: BW_SESSION not set. Run: source vw-connect" >&2; return 1; }
+    local name="$1"
+    local coll="${2:-}"
+    if [[ -n "$coll" ]]; then
+        bw list items --collectionid "$coll" --session "$BW_SESSION" 2>/dev/null | jq --arg n "$name" -r '.[] | select(.name==$n) | .notes'
+    else
+        bw list items --session "$BW_SESSION" 2>/dev/null | jq --arg n "$name" -r '.[] | select(.name==$n) | .notes'
+    fi
+}
+
+bwenv() {
+    if [[ $# -lt 1 ]]; then
+        echo "Usage: bwenv <VAR_NAME>" >&2
+        return 1
+    fi
+    [[ -z "${BW_SESSION:-}" ]] && { echo "Error: BW_SESSION not set. Run: source vw-connect" >&2; return 1; }
+    local varname="$1"
+    local value
+    value=$(bw list items --session "$BW_SESSION" 2>/dev/null | jq --arg n "$varname" -r '.[] | select(.name==$n and .type==2) | .notes')
+    if [[ -z "$value" ]]; then
+        echo "Error: '$varname' not found in Vaultwarden" >&2
+        return 1
+    fi
+    export "${varname}=${value}"
+    echo "exported ${varname}"
+}

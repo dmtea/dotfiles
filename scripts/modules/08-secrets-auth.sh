@@ -36,8 +36,8 @@ fi
 if check_cmd bw; then
     log_info "Bitwarden CLI already installed: $(get_version bw)"
 else
-    log_info "Installing Bitwarden CLI via npm..."
-    sudo npm install -g @bitwarden/cli
+    log_info "Installing Bitwarden CLI ${BW_CLI_VERSION} via npm..."
+    sudo npm install -g "@bitwarden/cli@${BW_CLI_VERSION}"
     log_info "Bitwarden CLI installed: $(get_version bw)"
 fi
 
@@ -77,8 +77,17 @@ if check_cmd bw; then
         BW_EMAIL="$(ask_value "Vaultwarden email")"
         if [ -n "$BW_EMAIL" ]; then
             log_info "Logging in to Vaultwarden..."
-            BW_SESSION="$(bw login "$BW_EMAIL" --raw 2>&1)" || true
-            if [ -n "$BW_SESSION" ] && ! echo "$BW_SESSION" | jq -e '.statusCode' >/dev/null 2>&1; then
+            BW_PASS="$(ask_secret "Master password")"
+            if [ -n "$BW_PASS" ]; then
+                if BW_PASSWORD="$BW_PASS" bw login "$BW_EMAIL" --passwordenv BW_PASSWORD >/dev/null 2>&1; then
+                    export BW_SESSION="$(BW_PASSWORD="$BW_PASS" bw unlock --passwordenv BW_PASSWORD --raw 2>/dev/null)"
+                    unset BW_PASS
+                else
+                    unset BW_PASS
+                    log_warn "Vaultwarden login failed — check email and password"
+                fi
+            fi
+            if [ -n "${BW_SESSION:-}" ]; then
                 export BW_SESSION
                 log_info "Logged in to Vaultwarden"
                 echo "$BW_SESSION" > "$STATE_DIR/bw-session"
@@ -210,8 +219,6 @@ if check_cmd bw; then
                         log_info "SSH keys deployed from collection '${VW_COLLECTION:-shared}'"
                     fi
                 fi
-            else
-                log_warn "Vaultwarden login failed — check email and password"
             fi
         fi
     elif [ "$BW_STATUS" = "authenticated" ]; then

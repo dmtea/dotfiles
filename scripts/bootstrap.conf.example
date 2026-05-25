@@ -6,6 +6,8 @@ GIT_NAME=""
 GIT_EMAIL=""
 
 # Vaultwarden (set URL to auto-configure during bootstrap)
+# If set, bootstrap will prompt for email/password, select collection,
+# and pull SSH keys + env vars (GIT_NAME, GIT_EMAIL, BT_MACs, etc.)
 VW_URL=""
 
 # Bluetooth device MAC addresses (leave empty to auto-detect or skip)

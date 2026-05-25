@@ -1,0 +1,98 @@
+#!/usr/bin/env bash
+set -euo pipefail
+trap 'unset ENV_VALUE 2>/dev/null' EXIT
+
+show_help() {
+    cat <<EOF
+Usage: env-backup [VAR_NAME]
+
+Save an environment variable to Vaultwarden.
+Creates a Secure Note (type 2) with name = VAR_NAME, notes = value.
+
+Options:
+  --folder NAME     Folder name (default: "environment", auto-created)
+  --collection ID   Store in organization collection (requires --org)
+  --org ID          Organization ID (required with --collection)
+  --help            Show this help
+
+If VAR_NAME is not provided, you will be prompted interactively.
+Value input is hidden (secure prompt).
+
+Requirements:
+  - BW_SESSION must be set (run: source vw-connect)
+  - jq and bw must be available
+EOF
+    return 0 2>/dev/null || exit 0
+}
+
+COLLECTION_ID=""
+ORG_ID=""
+FOLDER_NAME="environment"
+
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        --folder)      FOLDER_NAME="$2"; shift 2 ;;
+        --collection)  COLLECTION_ID="$2"; shift 2 ;;
+        --org)         ORG_ID="$2"; shift 2 ;;
+        --help)        show_help ;;
+        *)             VAR_NAME="${1:-}"; shift ;;
+    esac
+done
+
+[[ -z "${BW_SESSION:-}" ]] && { echo "Error: BW_SESSION not set. Run: source vw-connect" >&2; exit 1; }
+command -v jq &>/dev/null || { echo "Error: jq not found" >&2; exit 1; }
+command -v bw &>/dev/null || { echo "Error: bw not found" >&2; exit 1; }
+
+if [[ -z "${VAR_NAME:-}" ]]; then
+    read -rp "Variable name (e.g. GITHUB_TOKEN): " VAR_NAME
+fi
+
+if ! [[ "$VAR_NAME" =~ ^[A-Z_][A-Z0-9_]*$ ]]; then
+    echo "Error: '$VAR_NAME' is not a valid variable name. Must match ^[A-Z_][A-Z0-9_]*\$" >&2
+    exit 1
+fi
+
+if [[ -t 0 ]] && [[ -z "${!VAR_NAME:-}" ]]; then
+    read -s -rp "Value: " ENV_VALUE
+    echo
+else
+    ENV_VALUE="${!VAR_NAME:-}"
+    if [[ -z "$ENV_VALUE" ]]; then
+        read -s -rp "Value: " ENV_VALUE
+        echo
+    fi
+fi
+
+COLLECTION_ARGS=""
+if [[ -n "$COLLECTION_ID" ]] && [[ -n "$ORG_ID" ]]; then
+    COLLECTION_ARGS=", \"organizationId\": \"$ORG_ID\", \"collectionIds\": [\"$COLLECTION_ID\"]"
+fi
+
+FOLDER_ID=$(bw list folders --session "$BW_SESSION" 2>/dev/null | jq -r --arg f "$FOLDER_NAME" '.[] | select((.name | ascii_downcase) == ($f | ascii_downcase)) | .id' | head -1)
+if [[ -z "$FOLDER_ID" ]]; then
+    FOLDER_ID=$(jq -n -c --arg name "$FOLDER_NAME" '{name: $name}' | bw create folder --session "$BW_SESSION" 2>/dev/null | jq -r '.id')
+fi
+
+ESCAPED_VALUE=$(printf '%s' "$ENV_VALUE" | jq -sR .)
+ITEM_JSON=$(jq -n -c --arg name "$VAR_NAME" --arg fid "$FOLDER_ID" \
+    "{type:2, name:\$name, folderId:\$fid, notes:($ESCAPED_VALUE), secureNote:{type:0}, login:null, card:null, identity:null, sshKey:null, fields:[], favorite:false, reprompt:0$COLLECTION_ARGS}")
+
+ENCODED=$(printf '%s' "$ITEM_JSON" | base64 -w0)
+
+EXISTING=$(bw list items --session "$BW_SESSION" 2>/dev/null | jq --arg n "$VAR_NAME" -r '.[] | select(.name==$n) | .id' | head -1)
+
+if [[ -n "$EXISTING" ]]; then
+    read -rp "Item '$VAR_NAME' already exists. Update? [y/N] " CONFIRM
+    if [[ "${CONFIRM,,}" == "y" ]]; then
+        printf '%s' "$ENCODED" | bw edit item "$EXISTING" --session "$BW_SESSION" >/dev/null
+    else
+        unset ENV_VALUE
+        echo "Cancelled."
+        exit 0
+    fi
+else
+    printf '%s' "$ENCODED" | bw create item --session "$BW_SESSION" >/dev/null
+fi
+
+unset ENV_VALUE
+echo "Saved '$VAR_NAME' to VW"

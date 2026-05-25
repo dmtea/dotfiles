@@ -1,0 +1,137 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+BW_CMD="bw --session ${BW_SESSION:?BW_SESSION not set. Run: source vw-connect}"
+
+safe_item_fields='{
+  name,
+  id,
+  type,
+  organizationId,
+  collectionIds,
+  folderId,
+  favorite,
+  fields: [.fields[]? | {name, type}],
+  login: {username: .login.username?, uris: [.login.uris[]?.uri?]},
+  attachments: [.attachments[]? | {id, fileName, size}]
+}'
+
+safe_list_item='{
+  name,
+  id,
+  type,
+  folderId,
+  collectionIds,
+  organizationId,
+  fields: [.fields[]? | .name]
+}'
+
+cmd_list() {
+  local subtype="$1"
+  shift
+  case "$subtype" in
+    folders)
+      $BW_CMD list folders 2>/dev/null | jq '.[] | {name, id}'
+      ;;
+    orgs)
+      $BW_CMD list organizations 2>/dev/null | jq '.[] | {name, id, status, enabled}'
+      ;;
+    collections)
+      if [[ $# -gt 0 ]]; then
+        $BW_CMD list org-collections --organizationid "$1" 2>/dev/null | jq '.[] | {name, id, organizationId}'
+      else
+        $BW_CMD list collections 2>/dev/null | jq '.[] | {name, id, organizationId}'
+      fi
+      ;;
+    items)
+      if [[ $# -ge 2 ]]; then
+        local scope="$1"
+        local scope_id="$2"
+        case "$scope" in
+          folder)     $BW_CMD list items --folderid "$scope_id" 2>/dev/null | jq ".[] | $safe_list_item" ;;
+          collection) $BW_CMD list items --collectionid "$scope_id" 2>/dev/null | jq ".[] | $safe_list_item" ;;
+          org)        $BW_CMD list items --organizationid "$scope_id" 2>/dev/null | jq ".[] | $safe_list_item" ;;
+          *)          echo "Unknown scope: $scope (use folder|collection|org)" >&2; return 1 ;;
+        esac
+      else
+        $BW_CMD list items 2>/dev/null | jq ".[] | $safe_list_item"
+      fi
+      ;;
+    *)
+      echo "Unknown list type: $subtype (use folders|orgs|collections|items)" >&2
+      return 1
+      ;;
+  esac
+}
+
+cmd_get() {
+  local item_id="$1"
+  $BW_CMD get item "$item_id" 2>/dev/null | jq "$safe_item_fields"
+}
+
+cmd_create() {
+  local obj_type="$1"
+  local json_file="$2"
+  local extra_args=()
+
+  if [[ "$obj_type" == "org-collection" ]] && [[ $# -ge 3 ]]; then
+    extra_args=(--organizationid "$3")
+  fi
+
+  local raw
+  raw=$(base64 -w0 < "$json_file" | $BW_CMD create "$obj_type" "${extra_args[@]}" 2>/dev/null)
+
+  if [[ "$obj_type" == "item" ]]; then
+    echo "$raw" | jq "$safe_item_fields"
+  else
+    echo "$raw" | jq '.'
+  fi
+}
+
+cmd_delete() {
+  local obj_type="$1"
+  local obj_id="$2"
+  local extra_args=()
+
+  if [[ "$obj_type" == "org-collection" ]] && [[ $# -ge 3 ]]; then
+    extra_args=(--organizationid "$3")
+  fi
+
+  $BW_CMD delete "$obj_type" "$obj_id" "${extra_args[@]}" 2>/dev/null
+  echo "Deleted $obj_type $obj_id"
+}
+
+cmd_raw() {
+  local raw
+  raw=$($BW_CMD "$@" 2>/dev/null)
+  if echo "$raw" | jq -e 'type == "array" and (.[0].type // null) != null' >/dev/null 2>&1; then
+    echo "$raw" | jq ".[] | $safe_list_item"
+  elif echo "$raw" | jq -e '.type // null' >/dev/null 2>&1; then
+    echo "$raw" | jq "$safe_item_fields"
+  else
+    echo "$raw" | jq '.' 2>/dev/null || echo "$raw"
+  fi
+}
+
+case "${1:-help}" in
+  list)   shift; cmd_list "$@" ;;
+  get)    shift; cmd_get "$@" ;;
+  create) shift; cmd_create "$@" ;;
+  delete) shift; cmd_delete "$@" ;;
+  raw)    shift; cmd_raw "$@" ;;
+  help|*)
+    echo "vw-safe — safe wrapper for bw CLI (no secrets in output)"
+    echo ""
+    echo "Commands:"
+    echo "  list folders                              — list folder names and IDs"
+    echo "  list orgs                                 — list organizations"
+    echo "  list collections [org-id]                 — list collections"
+    echo "  list items [folder|collection|org] <id>   — list items (metadata only)"
+    echo "  get <item-id>                             — get item metadata (no secrets)"
+    echo "  create item <json-file>                   — create item from file"
+    echo "  delete item|folder|org-collection <id>    — delete object"
+    echo "  raw <bw-args>                             — run bw with safe filtering"
+    echo ""
+    echo "Requires BW_SESSION to be set."
+    ;;
+esac

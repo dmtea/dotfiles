@@ -81,7 +81,7 @@ This is NON-NEGOTIABLE. There are NO exceptions. Follow this procedure EXACTLY:
 
 1. **Secrets**: Always via SOPS + age, never in plaintext
 2. **Idempotent**: Every install step must be safe to re-run
-3. **Version Pinning**: Pin tool versions where possible (tmux 3.6a, kitty 0.46.2, nvim v0.12.1, SOPS 3.12.2, age 1.3.1, Nerd Fonts 3.4.0)
+3. **Version Pinning**: Pin tool versions where possible (tmux 3.6b, kitty 0.47.0, nvim v0.12.2, SOPS 3.13.1, age 1.3.1, BW CLI 2026.3.0, Nerd Fonts 3.4.0)
 4. **Version-Specific**: Each script targets exactly one OS version
 5. **Git**: Never commit secrets or .env files
 6. **PATH**: `add_to_path` writes to `.bashrc`, `.profile`, `.zprofile` — NOT `.zshrc` (stow-managed). Exception: removing the oh-my-zsh template `.zshrc` after `--unattended` install is required for stow to symlink the managed version.
@@ -120,7 +120,7 @@ Format: **What / Why / How** + commands + verification.
 | Python manager    | uv (astral.sh)                               | Replaces pip + pipx + virtualenv                           |
 | 24.04 Python      | pip excluded (PEP 668 blocks it), venv+full  | Workaround: uv tool for global packages                    |
 | Bun runtime       | Included                                     | Fast JS runtime, available on 24.04+                       |
-| Secrets backend   | SOPS + age + Bitwarden CLI                   | Encrypt-in-repo + CLI access to Vaultwarden                |
+| Secrets backend   | Vaultwarden (collections + folders)       | Org items per collection, folders as type labels. BW CLI pinned 2026.3.0 |
 | TPM location      | ~/.config/tmux/plugins/tpm (XDG path)        | Matches tmux.conf XDG location; TPM auto-detects XDG      |
 | fzf install       | git clone + --no-update-rc                   | Dotfiles .zshrc already sources .fzf.zsh                   |
 | Dotfiles packages | git/, archive/, kitty/, nvim/, opencode/, tmux/, zsh/ | Managed via GNU stow in ~/dotfiles             |
@@ -131,12 +131,42 @@ Format: **What / Why / How** + commands + verification.
 
 ## Research
 
+- **Vaultwarden integration** — full guide: `docs/vaultwarden-guide.md`. Organization collections for per-machine access, folders for type labels. BW CLI pinned to 2026.3.0.
 - **XKB unipunct layout** — custom Russian layout (US punctuation + Ukrainian AltGr): `docs/research/xkb-unipunct-layout/`. Contains: deployment research (AGENTS.md), system `symbols/ru`, kitty `ru-shortcuts.conf`, legacy user xkb files. Tested on Pop!_OS 24.04 (COSMIC) and Ubuntu 26.04 (GNOME) VMs.
+
+---
+
+## Vaultwarden Quick Reference
+
+### Structure: org → collections (per machine) + folders (per type)
+
+- **Collection** = machine access (dmbot=laptop, atmanam=server). One item per collection — NEVER multi-collection items.
+- **Folder** = type label (`.ssh` for keys, `.env` for vars).
+- **organizationId** MANDATORY on all items (or they won't show in UI).
+- SSH keys: type 5 (native), folder `.ssh`. Env vars: type 2 (Secure Note), folder `.env`.
+
+### BW CLI Rules
+
+- Version pinned: `2026.3.0` (in `versions.sh`). NEVER install latest — 2026.4.0 was supply-chain attacked.
+- Login: `BW_PASSWORD="$PASS" bw login --passwordenv BW_PASSWORD` — NEVER `--raw` or stdin pipe.
+- Create items: `bw get template item | jq ... | bw encode | bw create item` — NEVER raw JSON to bw create.
+- Explore safely: `vw-safe list items collection <id>` — NEVER raw bw output (leaks secrets).
+
+### VW Triggers
+
+| Trigger | Action |
+|---------|--------|
+| "add SSH key to VW" | Run `ssh-backup --org ID --collection ID <key-path>` |
+| "add env var to VW" | Run `env-backup --org ID --collection ID <VAR_NAME>` |
+| "rotate key/token" | See `docs/vaultwarden-guide.md` → Key Rotation |
+| "check VW items" | Run `vw-safe list items collection <id>` |
+| "VW login" | Run `source vw-connect` |
 
 ---
 
 ## Open Questions
 
-1. Secrets recovery flow — Z_AI_API_KEY now in VW. Remaining: age key → SOPS → SSH keys → GitHub PAT → WireGuard config.
+1. Secrets recovery flow — Z_AI_API_KEY + SSH keys + git identity now in VW. Remaining: age key → SOPS → GitHub PAT → WireGuard config.
 2. `.local/share/opencode/` in dotfiles — should `auth.json` and app data be stow-managed at all? Consider removing `.local/` from the opencode stow package.
 3. `.gitignore` stow conflict at `~/.config/opencode/.gitignore` — pre-existing file from opencode prevents stow from deploying dotfiles version.
+4. SSH key rotation automation — `ssh-backup` + `env-backup` utilities available, but no cron/systemd timer yet.
