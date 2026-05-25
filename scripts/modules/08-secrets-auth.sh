@@ -58,15 +58,6 @@ else
     log_info "gh CLI installed: $(get_version gh)"
 fi
 
-# --- opencode CLI ---
-if [ -x "$HOME/.opencode/bin/opencode" ]; then
-    log_info "opencode already installed: $($HOME/.opencode/bin/opencode --version 2>/dev/null || echo 'installed')"
-else
-    log_info "Installing opencode CLI..."
-    curl -fsSL https://opencode.ai/install | bash -s -- --no-modify-path
-    log_info "opencode installed: $($HOME/.opencode/bin/opencode --version 2>/dev/null || echo 'installed')"
-fi
-
 # --- Vaultwarden login (optional) ---
 if check_cmd bw; then
     BW_STATUS="$(bw status 2>/dev/null | grep -o '"status":"[^"]*"' | head -1 | cut -d'"' -f4 || echo 'unknown')"
@@ -90,27 +81,40 @@ if check_cmd bw; then
             if [ -n "$BW_SESSION" ] && ! echo "$BW_SESSION" | jq -e '.statusCode' >/dev/null 2>&1; then
                 export BW_SESSION
                 log_info "Logged in to Vaultwarden"
-
-                for VW_ITEM in GIT_USER_NAME GIT_USER_EMAIL BT_HEADPHONES_MAC BT_MOUSE_MAC; do
-                    VW_NOTES="$(bw get item "$VW_ITEM" 2>/dev/null | jq -r '.notes // empty' 2>/dev/null || true)"
-                    if [ -n "$VW_NOTES" ]; then
-                        case "$VW_ITEM" in
-                            GIT_USER_NAME) export GIT_NAME="$VW_NOTES"; log_info "Git name from VW: $GIT_NAME" ;;
-                            GIT_USER_EMAIL) export GIT_EMAIL="$VW_NOTES"; log_info "Git email from VW: $GIT_EMAIL" ;;
-                            BT_HEADPHONES_MAC) export BT_HEADPHONES="$VW_NOTES"; log_info "BT headphones from VW: $BT_HEADPHONES" ;;
-                            BT_MOUSE_MAC) export BT_MOUSE="$VW_NOTES"; log_info "BT mouse from VW: $BT_MOUSE" ;;
-                        esac
-                    fi
-                done
-
                 echo "$BW_SESSION" > "$STATE_DIR/bw-session"
 
-                cat > "$STATE_DIR/vw-data" <<VWEOF
-GIT_NAME="${GIT_NAME:-}"
-GIT_EMAIL="${GIT_EMAIL:-}"
-BT_HEADPHONES="${BT_HEADPHONES:-}"
-BT_MOUSE="${BT_MOUSE:-}"
-VWEOF
+                VW_ENV_ITEMS="$(bw list items --session "$BW_SESSION" 2>/dev/null \
+                    | jq -r '.[] | select(.type==2 and (.name | test("^[A-Z_]+$")))' 2>/dev/null || true)"
+
+                if [ -n "$VW_ENV_ITEMS" ]; then
+                    echo ""
+                    echo "  Found in Vaultwarden:"
+                    echo "$VW_ENV_ITEMS" | jq -r '. | "    \(.name) = \(.notes)"'
+                    echo ""
+                    if ask_yesno "Apply these values?" "y"; then
+                        VW_DATA=""
+                        echo "$VW_ENV_ITEMS" | jq -r '.name + "\t" + .notes' | while IFS=$'\t' read -r vw_name vw_value; do
+                            [ -z "$vw_value" ] && continue
+                            case "$vw_name" in
+                                GIT_USER_NAME) export GIT_NAME="$vw_value"; log_info "GIT_NAME=$GIT_NAME" ;;
+                                GIT_USER_EMAIL) export GIT_EMAIL="$vw_value"; log_info "GIT_EMAIL=$GIT_EMAIL" ;;
+                                *) export "$vw_name=$vw_value" 2>/dev/null; log_info "$vw_name set" ;;
+                            esac
+                            VW_DATA="${VW_DATA:+$VW_DATA\n}${vw_name}=\"${vw_value}\""
+                        done
+
+                        VW_ENV_FILE="$STATE_DIR/vw-data"
+                        : > "$VW_ENV_FILE"
+                        echo "$VW_ENV_ITEMS" | jq -r '.name + "=\"" + .notes + "\""' >> "$VW_ENV_FILE"
+                    fi
+                fi
+
+                VW_SSH_ITEMS="$(bw list items --session "$BW_SESSION" 2>/dev/null \
+                    | jq -r '.[] | select(.type==5)' 2>/dev/null || true)"
+                if [ -n "$VW_SSH_ITEMS" ]; then
+                    VW_SSH_COUNT="$(echo "$VW_SSH_ITEMS" | jq -s 'length')"
+                    log_info "Found $VW_SSH_COUNT SSH key(s) in Vaultwarden"
+                fi
             else
                 log_warn "Vaultwarden login failed — check email and password"
             fi

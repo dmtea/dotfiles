@@ -75,7 +75,7 @@ exec > >(tee -a "$LOG_FILE") 2>&1
 echo "=== Bootstrap — Pop!_OS / Ubuntu 24.04+ (amd64) ==="
 echo "Log: $LOG_FILE"
 
-ALL_MODULES=(00-preflight 01-system-base 02-terminal-fonts 03-shell 04-multiplexer 05-editor 06-languages 07-infrastructure 08-secrets-auth 09-dotfiles 10-summary)
+ALL_MODULES=(00-preflight 01-system-base 02-terminal-fonts 03-shell 04-multiplexer 05-editor 06-languages 07-infrastructure 08-secrets-auth 08-ai-agents 09-dotfiles 10-summary)
 
 if [ -n "$BOOTSTRAP_ONLY" ]; then
     IFS=',' read -ra SELECTED <<< "$BOOTSTRAP_ONLY"
