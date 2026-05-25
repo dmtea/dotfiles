@@ -32,6 +32,12 @@ fi
 
 sudo -v || { log_error "sudo access required."; exit 1; }
 
+if command -v chronyc >/dev/null 2>&1; then
+    if ! sudo chronyc -a makestep 2>/dev/null; then
+        log_warn "chrony time sync failed (non-critical)"
+    fi
+fi
+
 mkdir -p "$STATE_DIR"
 
 export PATH="/opt/nvim-linux-x86_64/bin:$HOME/.local/kitty.app/bin:$HOME/.local/bin:$HOME/.bun/bin:$PATH"
