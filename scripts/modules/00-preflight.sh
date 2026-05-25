@@ -32,9 +32,13 @@ fi
 
 sudo -v || { log_error "sudo access required."; exit 1; }
 
-if command -v chronyc >/dev/null 2>&1; then
-    if ! sudo chronyc -a makestep 2>/dev/null; then
-        log_warn "chrony time sync failed (non-critical)"
+if ! timedatectl show | grep -q "System clock synchronized: yes" 2>/dev/null; then
+    if command -v chronyc >/dev/null 2>&1; then
+        sudo chronyc -a makestep 2>/dev/null || true
+    fi
+    NOW="$(curl -sI https://google.com 2>/dev/null | grep -i "^date:" | sed 's/[Dd]ate: //')"
+    if [ -n "$NOW" ]; then
+        sudo date -s "$NOW" 2>/dev/null || true
     fi
 fi
 
