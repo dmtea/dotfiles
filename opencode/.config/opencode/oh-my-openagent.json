@@ -2,162 +2,65 @@
   "$schema": "https://raw.githubusercontent.com/code-yeongyu/oh-my-openagent/main/assets/oh-my-opencode.schema.json",
   "agents": {
     "sisyphus": {
-      "model": "zai-coding-plan/glm-5.1",
-      "fallback_models": [
-        "opencode/big-pickle",
-        "opencode/minimax-m2.5-free",
-        "opencode/nemotron-3-super-free"
-      ]
+      "model": "zai-coding-plan/glm-5.1"
     },
     "oracle": {
-      "model": "zai-coding-plan/glm-5.1",
-      "fallback_models": [
-        "opencode/big-pickle",
-        "opencode/minimax-m2.5-free",
-        "opencode/nemotron-3-super-free"
-      ]
+      "model": "zai-coding-plan/glm-5.1"
     },
     "librarian": {
-      "model": "zai-coding-plan/glm-5-turbo",
-      "fallback_models": [
-        "opencode/big-pickle",
-        "opencode/minimax-m2.5-free",
-        "opencode/nemotron-3-super-free",
-        "opencode/gpt-5-nano"
-      ]
+      "model": "zai-coding-plan/glm-5-turbo"
     },
     "explore": {
-      "model": "zai-coding-plan/glm-5-turbo",
-      "fallback_models": [
-        "opencode/big-pickle",
-        "opencode/minimax-m2.5-free",
-        "opencode/nemotron-3-super-free",
-        "opencode/gpt-5-nano"
-      ]
+      "model": "zai-coding-plan/glm-5-turbo"
     },
     "multimodal-looker": {
-      "model": "zai-coding-plan/glm-4.6v",
-      "fallback_models": [
-        "opencode/gpt-5-nano"
-      ]
+      "model": "zai-coding-plan/glm-4.6v"
     },
     "prometheus": {
-      "model": "zai-coding-plan/glm-5.1",
-      "fallback_models": [
-        "opencode/big-pickle",
-        "opencode/minimax-m2.5-free",
-        "opencode/nemotron-3-super-free"
-      ]
+      "model": "zai-coding-plan/glm-5.1"
     },
     "metis": {
-      "model": "zai-coding-plan/glm-5.1",
-      "fallback_models": [
-        "opencode/big-pickle",
-        "opencode/minimax-m2.5-free",
-        "opencode/nemotron-3-super-free"
-      ]
+      "model": "zai-coding-plan/glm-5.1"
     },
     "momus": {
-      "model": "zai-coding-plan/glm-5.1",
-      "fallback_models": [
-        "opencode/big-pickle",
-        "opencode/minimax-m2.5-free",
-        "opencode/nemotron-3-super-free"
-      ]
+      "model": "zai-coding-plan/glm-5.1"
     },
     "atlas": {
-      "model": "zai-coding-plan/glm-5.1",
-      "fallback_models": [
-        "opencode/big-pickle",
-        "opencode/minimax-m2.5-free",
-        "opencode/nemotron-3-super-free"
-      ]
+      "model": "zai-coding-plan/glm-5.1"
     }
   },
   "categories": {
     "visual-engineering": {
-      "model": "zai-coding-plan/glm-5.1",
-      "fallback_models": [
-        "opencode/big-pickle",
-        "opencode/minimax-m2.5-free",
-        "opencode/nemotron-3-super-free"
-      ]
+      "model": "zai-coding-plan/glm-5.1"
     },
     "ultrabrain": {
-      "model": "zai-coding-plan/glm-5.1",
-      "fallback_models": [
-        "opencode/big-pickle",
-        "opencode/minimax-m2.5-free",
-        "opencode/nemotron-3-super-free"
-      ]
+      "model": "zai-coding-plan/glm-5.1"
     },
     "deep": {
-      "model": "zai-coding-plan/glm-5.1",
-      "fallback_models": [
-        "opencode/big-pickle",
-        "opencode/minimax-m2.5-free",
-        "opencode/nemotron-3-super-free"
-      ]
+      "model": "zai-coding-plan/glm-5.1"
     },
     "artistry": {
-      "model": "zai-coding-plan/glm-5.1",
-      "fallback_models": [
-        "opencode/big-pickle",
-        "opencode/minimax-m2.5-free",
-        "opencode/nemotron-3-super-free"
-      ]
+      "model": "zai-coding-plan/glm-5.1"
     },
     "quick": {
-      "model": "zai-coding-plan/glm-5-turbo",
-      "fallback_models": [
-        "opencode/big-pickle",
-        "opencode/minimax-m2.5-free",
-        "opencode/nemotron-3-super-free",
-        "opencode/gpt-5-nano"
-      ]
+      "model": "zai-coding-plan/glm-5-turbo"
     },
     "unspecified-low": {
-      "model": "zai-coding-plan/glm-5-turbo",
-      "fallback_models": [
-        "opencode/big-pickle",
-        "opencode/minimax-m2.5-free",
-        "opencode/nemotron-3-super-free",
-        "opencode/gpt-5-nano"
-      ]
+      "model": "zai-coding-plan/glm-5-turbo"
     },
     "unspecified-high": {
-      "model": "zai-coding-plan/glm-5.1",
-      "fallback_models": [
-        "opencode/big-pickle",
-        "opencode/minimax-m2.5-free",
-        "opencode/nemotron-3-super-free"
-      ]
+      "model": "zai-coding-plan/glm-5.1"
     },
     "writing": {
-      "model": "zai-coding-plan/glm-5-turbo",
-      "fallback_models": [
-        "opencode/big-pickle",
-        "opencode/minimax-m2.5-free",
-        "opencode/nemotron-3-super-free",
-        "opencode/gpt-5-nano"
-      ]
+      "model": "zai-coding-plan/glm-5-turbo"
     }
   },
   "background_task": {
     "defaultConcurrency": 5,
     "staleTimeoutMs": 180000,
     "providerConcurrency": {
-      "zai-coding-plan": 10,
-      "opencode": 10
+      "zai-coding-plan": 10
     }
-  },
-  "runtime_fallback": {
-    "enabled": true,
-    "retry_on_errors": [400, 401, 403, 429, 500, 502, 503, 529],
-    "max_fallback_attempts": 3,
-    "cooldown_seconds": 60,
-    "timeout_seconds": 30,
-    "notify_on_fallback": true
   },
   "tmux": {
     "enabled": true,
