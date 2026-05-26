@@ -85,10 +85,8 @@ for layout in root.iter('layout'):
 
     if command -v gsettings &>/dev/null; then
         gsettings set org.gnome.desktop.input-sources sources "[('xkb', 'us'), ('xkb', 'ru+unipunct')]"
-        gsettings set org.gnome.desktop.input-sources xkb-options "['caps:none', 'lv3:ralt_switch']"
-        gsettings set org.gnome.desktop.wm.keybindings switch-input-source "['Caps_Lock']"
-        gsettings set org.gnome.desktop.wm.keybindings switch-input-source-backward "['<Shift>Caps_Lock']"
-        log_info "Keyboard layout set: us + ru+unipunct (CapsLock=GNOME switch, AltGr level3)"
+        gsettings set org.gnome.desktop.input-sources xkb-options "['grp:caps_toggle', 'lv3:ralt_switch']"
+        log_info "Keyboard layout set: us + ru+unipunct (CapsLock toggle, AltGr level3)"
     fi
 else
     log_warn "Custom keyboard layout source not found: $XKB_RU_SRC"
