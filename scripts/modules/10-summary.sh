@@ -33,8 +33,8 @@ echo "  apt extras: ripgrep, jq, fd-find, bat, tree, zip, xclip, wl-clipboard"
 echo ""
 
 if [ -x "$HOME/.opencode/bin/opencode" ] && [ -f "$HOME/.env.local" ]; then
-    OPENCODE_TEST="$(source "$HOME/.env.local" && cd "$HOME/dotfiles" && timeout 30 "$HOME/.opencode/bin/opencode" run "Reply with exactly: OK" 2>/dev/null || true)"
-    if [ -n "$OPENCODE_TEST" ]; then
+    OPENCODE_TEST="$(source "$HOME/.env.local" && cd "$HOME/dotfiles" && timeout 30 "$HOME/.opencode/bin/opencode" run "Reply with exactly: OK" 2>&1 || true)"
+    if echo "$OPENCODE_TEST" | grep -q "OK"; then
         log_info "opencode API verified: model responded"
     else
         log_warn "opencode API test: no response (check Z_AI_API_KEY and network)"
