@@ -32,8 +32,12 @@ for pkg in $STOW_PACKAGES; do
         if stow "$pkg" 2>&1; then
             log_info "stowed: $pkg"
         else
-            if stow --adopt "$pkg" 2>&1; then
-                log_info "stowed (adopted): $pkg"
+            log_warn "stow $pkg failed — removing conflicts and retrying..."
+            stow "$pkg" 2>&1 | grep -oP "existing target is neither a link nor a directory: \K.*" | while read -r conflict; do
+                rm -f "$conflict"
+            done
+            if stow "$pkg" 2>&1; then
+                log_info "stowed: $pkg (after conflict removal)"
             else
                 log_warn "stow $pkg failed — check for conflicts"
             fi

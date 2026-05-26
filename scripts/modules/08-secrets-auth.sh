@@ -92,17 +92,20 @@ if check_cmd bw; then
                 log_info "Logged in to Vaultwarden"
                 echo "$BW_SESSION" > "$STATE_DIR/bw-session"
 
-                VW_COLLECTIONS="$(bw list collections --session "$BW_SESSION" 2>/dev/null | jq -r '.[] | .name' 2>/dev/null || true)"
+                VW_COLLECTIONS_JSON="$(bw list collections --session "$BW_SESSION" 2>/dev/null || true)"
+                VW_COLLECTIONS="$(echo "$VW_COLLECTIONS_JSON" | jq -r '.[] | .name' 2>/dev/null || true)"
                 if [ -n "$VW_COLLECTIONS" ]; then
+                    VW_COL_COUNT="$(echo "$VW_COLLECTIONS" | wc -l)"
                     echo ""
                     echo "  Available collections:"
-                    echo "$VW_COLLECTIONS" | while read -r col; do echo "    - $col"; done
-                    VW_COLLECTION="$(ask_value "Select collection for this machine")"
+                    echo "$VW_COLLECTIONS" | nl -w2 -s') ' | sed 's/^/    /'
+                    VW_COL_NUM="$(ask_value "Select collection [1-${VW_COL_COUNT}]" "1")"
+                    VW_COLLECTION="$(echo "$VW_COLLECTIONS" | sed -n "${VW_COL_NUM}p")"
                 fi
 
                 VW_COLLECTION_ID=""
                 if [ -n "${VW_COLLECTION:-}" ]; then
-                    VW_COLLECTION_ID="$(bw list collections --session "$BW_SESSION" 2>/dev/null \
+                    VW_COLLECTION_ID="$(echo "$VW_COLLECTIONS_JSON" \
                         | jq -r ".[] | select(.name==\"$VW_COLLECTION\") | .id" 2>/dev/null || true)"
                 fi
 
@@ -121,7 +124,15 @@ if check_cmd bw; then
                     VW_ENV_COUNT="$(echo "$VW_ENV_ITEMS" | jq -s 'length')"
                     echo ""
                     echo "  Found ${VW_ENV_COUNT} env var(s) from collection '${VW_COLLECTION:-shared}':"
-                    echo "$VW_ENV_ITEMS" | jq -r '. | "    \(.name) = ****"'
+                    echo "$VW_ENV_ITEMS" | jq -r '.name + "\t" + .notes' | while IFS=$'\t' read -r vw_name vw_value; do
+                        case "$vw_name" in
+                            *KEY*|*TOKEN*|*SECRET*|*PASSWORD*|*PASS*)
+                                vw_preview="${vw_value:0:4}...${vw_value: -4}"
+                                ;;
+                            *) vw_preview="$vw_value" ;;
+                        esac
+                        echo "    ${vw_name} = ${vw_preview}"
+                    done
                     echo ""
                     if ask_yesno "Apply these values?" "y"; then
                         # Temp file for bootstrap-internal passing (exported vars)
@@ -132,16 +143,17 @@ if check_cmd bw; then
                         : > "$VW_ENV_PERSIST"
                         echo "$VW_ENV_ITEMS" | jq -r '.name + "\t" + .notes' | while IFS=$'\t' read -r vw_name vw_value; do
                             [ -z "$vw_value" ] && continue
-                            case "$vw_name" in
-                                GIT_USER_NAME) export GIT_NAME="$vw_value" ;;
-                                GIT_USER_EMAIL) export GIT_EMAIL="$vw_value" ;;
-                                *) export "$vw_name=$vw_value" 2>/dev/null || true ;;
-                            esac
+                            export "$vw_name=$vw_value" 2>/dev/null || true
                             # Bootstrap-internal (subshell bridge)
                             echo "export ${vw_name}=\"${vw_value}\"" >> "$VW_ENV_FILE"
                             # Persistent (survives logout)
                             echo "export ${vw_name}=\"${vw_value}\"" >> "$VW_ENV_PERSIST"
-                            log_info "$vw_name set (value hidden)"
+                            case "$vw_name" in
+                                *KEY*|*TOKEN*|*SECRET*|*PASSWORD*|*PASS*)
+                                    log_info "$vw_name set (${vw_value:0:4}...)"
+                                    ;;
+                                *) log_info "$vw_name set ($vw_value)" ;;
+                            esac
                         done
                         chmod 600 "$VW_ENV_PERSIST"
                         log_info "Env vars persisted to $VW_ENV_PERSIST"

@@ -30,8 +30,7 @@ if [ -d "$HOME/.oh-my-zsh" ]; then
     log_info "oh-my-zsh already installed"
 else
     log_info "Installing oh-my-zsh..."
-    sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" "" --unattended
-    rm -f ~/.zshrc
+    sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" "" --unattended --keep-zshrc
     log_info "oh-my-zsh installed"
 fi
 

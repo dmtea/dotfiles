@@ -13,19 +13,19 @@ if [ -f "$GITCONFIG" ] && grep -qE '^\s+name\s*=' "$GITCONFIG" 2>/dev/null; then
     exit 0
 fi
 
-if [ "${GIT_NAME:-}" = "" ] || [ "${GIT_EMAIL:-}" = "" ]; then
+if [ "${GIT_USER_NAME:-}" = "" ] || [ "${GIT_USER_EMAIL:-}" = "" ]; then
     echo ""
     echo "  Git identity configuration:"
-    GIT_NAME="$(ask_value "Your name" "${GIT_NAME:-}")"
-    GIT_EMAIL="$(ask_value "Your email" "${GIT_EMAIL:-}")"
+    GIT_USER_NAME="$(ask_value "Your name" "${GIT_USER_NAME:-}")"
+    GIT_USER_EMAIL="$(ask_value "Your email" "${GIT_USER_EMAIL:-}")"
 fi
 
 cat > "$GITCONFIG" <<EOF
 [user]
-	name = ${GIT_NAME}
-	email = ${GIT_EMAIL}
+	name = ${GIT_USER_NAME}
+	email = ${GIT_USER_EMAIL}
 [init]
 	defaultBranch = main
 EOF
 
-log_info "gitconfig written: ${GIT_NAME} <${GIT_EMAIL}>"
+log_info "gitconfig written: ${GIT_USER_NAME} <${GIT_USER_EMAIL}>"
