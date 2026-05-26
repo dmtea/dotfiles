@@ -41,7 +41,7 @@ if [ ! -f "$BT_CONF" ]; then
         log_info "BT config written: $BT_CONF"
     else
         log_info "No BT devices configured, skipping keybindings"
-        exit 0
+        return 0
     fi
 else
     log_info "BT config already exists: $BT_CONF"

@@ -24,7 +24,7 @@ if [ -z "$DOTFILES_DIR" ]; then
     exit 0
 fi
 
-STOW_PACKAGES="zsh kitty opencode nvim tmux"
+STOW_PACKAGES="xkb zsh kitty opencode nvim tmux"
 
 for pkg in $STOW_PACKAGES; do
     if [ -d "$DOTFILES_DIR/$pkg" ]; then

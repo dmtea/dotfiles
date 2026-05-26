@@ -1,18 +1,20 @@
 # bootstrap.conf — copy to bootstrap.conf and edit before first run
 # Empty values = prompted at runtime. Filled values = used silently.
 
-# Personal data
-GIT_NAME=""
-GIT_EMAIL=""
+# Personal data (used if VW_URL is not set)
+GIT_USER_NAME=""
+GIT_USER_EMAIL=""
 
 # Vaultwarden (set URL to auto-configure during bootstrap)
 # If set, bootstrap will prompt for email/password, select collection,
-# and pull SSH keys + env vars (GIT_NAME, GIT_EMAIL, BT_MACs, etc.)
+# and pull SSH keys + env vars (GIT_USER_NAME, GIT_USER_EMAIL,
+# BT_HEADPHONES_MAC, BT_MOUSE_MAC, Z_AI_API_KEY, etc.)
 VW_URL=""
 
 # Bluetooth device MAC addresses (leave empty to auto-detect or skip)
-BT_HEADPHONES=""
-BT_MOUSE=""
+# These are also available via Vaultwarden env vars
+BT_HEADPHONES_MAC=""
+BT_MOUSE_MAC=""
 
 # Modules to skip (uncomment to exclude)
 # SKIP_MODULES=(xkb)

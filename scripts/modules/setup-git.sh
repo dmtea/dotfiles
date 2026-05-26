@@ -10,7 +10,7 @@ GITCONFIG="$HOME/.gitconfig"
 
 if [ -f "$GITCONFIG" ] && grep -qE '^\s+name\s*=' "$GITCONFIG" 2>/dev/null; then
     log_info "gitconfig already configured with user identity"
-    exit 0
+    return 0
 fi
 
 if [ "${GIT_USER_NAME:-}" = "" ] || [ "${GIT_USER_EMAIL:-}" = "" ]; then
