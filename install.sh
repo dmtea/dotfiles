@@ -69,11 +69,6 @@ cd "$CLONE_DIR/scripts"
 if [ ! -f bootstrap.conf ]; then
     echo "Creating bootstrap.conf from example..."
     cp bootstrap.conf.example bootstrap.conf
-    echo ""
-    echo "NOTE: GIT_NAME and GIT_EMAIL are empty."
-    echo "      You will be prompted during bootstrap, or edit:"
-    echo "      ${CLONE_DIR}/scripts/bootstrap.conf"
-    echo ""
 fi
 
 echo "Starting bootstrap..."
