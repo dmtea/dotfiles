@@ -34,7 +34,7 @@ Thumbs.db
 credentials.json
 
 # Runtime (stow packages)
-plugins/
+**/lazy/plugins/
 lazy-lock.json
 auth.json
 
