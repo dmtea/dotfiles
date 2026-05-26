@@ -11,8 +11,8 @@ BT_CONF="$HOME/.config/bt-devices.conf"
 mkdir -p "$(dirname "$BT_CONF")"
 
 if [ ! -f "$BT_CONF" ]; then
-    HEADPHONES_MAC="${BT_HEADPHONES:-}"
-    MOUSE_MAC="${BT_MOUSE:-}"
+    HEADPHONES_MAC="${BT_HEADPHONES_MAC:-}"
+    MOUSE_MAC="${BT_MOUSE_MAC:-}"
 
     if systemctl is-active --quiet bluetooth 2>/dev/null; then
         PAIRED=$(timeout 3 bluetoothctl devices Paired 2>/dev/null || true)
