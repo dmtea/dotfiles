@@ -27,7 +27,7 @@ EOF
 
 COLLECTION_ID=""
 ORG_ID=""
-FOLDER_NAME="environment"
+FOLDER_NAME=".env"
 
 while [[ $# -gt 0 ]]; do
     case "$1" in

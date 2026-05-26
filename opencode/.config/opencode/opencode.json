@@ -17,22 +17,10 @@
       "mode": "primary",
       "description": "Full access agent for development work",
       "model": "zai-coding-plan/glm-5.1",
-      "fallback_models": [
-        "opencode/big-pickle",
-        "opencode/minimax-m2.5-free",
-        "opencode/nemotron-3-super-free"
-      ],
       "tools": {
         "write": true,
         "edit": true,
         "bash": true
-      },
-      "options": {
-        "fallback_models": [
-          "opencode/big-pickle",
-          "opencode/minimax-m2.5-free",
-          "opencode/nemotron-3-super-free"
-        ]
       },
       "permission": {
         "edit": "allow",
@@ -43,21 +31,9 @@
       "mode": "primary",
       "description": "Planning and analysis agent without making changes",
       "model": "zai-coding-plan/glm-5.1",
-      "fallback_models": [
-        "opencode/big-pickle",
-        "opencode/minimax-m2.5-free",
-        "opencode/nemotron-3-super-free"
-      ],
       "permission": {
         "edit": "ask",
         "bash": "ask"
-      },
-      "options": {
-        "fallback_models": [
-          "opencode/big-pickle",
-          "opencode/minimax-m2.5-free",
-          "opencode/nemotron-3-super-free"
-        ]
       }
     }
   },

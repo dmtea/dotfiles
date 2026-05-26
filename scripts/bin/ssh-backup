@@ -23,7 +23,7 @@ EOF
 
 COLLECTION_ID=""
 ORG_ID=""
-FOLDER_NAME="ssh keys"
+FOLDER_NAME=".ssh"
 
 while [[ $# -gt 0 ]]; do
     case "$1" in

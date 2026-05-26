@@ -78,10 +78,10 @@ if check_cmd bw; then
         log_info "Configuring Bitwarden for: $VW_URL"
         bw config server "$VW_URL" 2>&1 || log_warn "bw config server failed"
 
-        BW_EMAIL="$(ask_value "Vaultwarden email")"
+        BW_EMAIL="${VW_EMAIL:-$(ask_value "Vaultwarden email")}"
         if [ -n "$BW_EMAIL" ]; then
             log_info "Logging in to Vaultwarden..."
-            BW_PASS="$(ask_secret "Master password")"
+            BW_PASS="${VW_PASSWORD:-$(ask_secret "Master password")}"
             if [ -n "$BW_PASS" ]; then
                 if BW_PASSWORD="$BW_PASS" bw login "$BW_EMAIL" --passwordenv BW_PASSWORD >/dev/null 2>&1; then
                     export BW_SESSION="$(BW_PASSWORD="$BW_PASS" bw unlock --passwordenv BW_PASSWORD --raw 2>/dev/null)"
@@ -99,7 +99,12 @@ if check_cmd bw; then
 
                 VW_COLLECTIONS_JSON="$(bw list collections --session "$BW_SESSION" 2>/dev/null || true)"
                 VW_COLLECTIONS="$(echo "$VW_COLLECTIONS_JSON" | jq -r '.[] | .name' 2>/dev/null || true)"
-                if [ -n "$VW_COLLECTIONS" ]; then
+
+                if [ -n "${VW_COLLECTION_ID:-}" ]; then
+                    VW_COLLECTION="$(echo "$VW_COLLECTIONS_JSON" \
+                        | jq -r ".[] | select(.id==\"$VW_COLLECTION_ID\") | .name" 2>/dev/null || true)"
+                    log_info "Using configured collection: ${VW_COLLECTION:-$VW_COLLECTION_ID}"
+                elif [ -n "$VW_COLLECTIONS" ]; then
                     VW_COL_COUNT="$(echo "$VW_COLLECTIONS" | wc -l)"
                     echo ""
                     echo "  Available collections:"
@@ -108,8 +113,7 @@ if check_cmd bw; then
                     VW_COLLECTION="$(echo "$VW_COLLECTIONS" | sed -n "${VW_COL_NUM}p")"
                 fi
 
-                VW_COLLECTION_ID=""
-                if [ -n "${VW_COLLECTION:-}" ]; then
+                if [ -z "${VW_COLLECTION_ID:-}" ] && [ -n "${VW_COLLECTION:-}" ]; then
                     VW_COLLECTION_ID="$(echo "$VW_COLLECTIONS_JSON" \
                         | jq -r ".[] | select(.name==\"$VW_COLLECTION\") | .id" 2>/dev/null || true)"
                 fi
