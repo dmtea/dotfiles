@@ -33,7 +33,7 @@ echo "  apt extras: ripgrep, jq, fd-find, bat, tree, zip, xclip, wl-clipboard"
 echo ""
 
 if [ -x "$HOME/.opencode/bin/opencode" ] && [ -f "$HOME/.env.local" ]; then
-    OPENCODE_TEST="$(source "$HOME/.env.local" && cd "$HOME/dotfiles" && timeout 30 "$HOME/.opencode/bin/opencode" run "Reply with exactly: OK" 2>&1 || true)"
+    OPENCODE_TEST="$(source "$HOME/.env.local" && cd "$HOME/dotfiles" && "$HOME/.opencode/bin/opencode" run "Reply with exactly: OK" 2>&1 || true)"
     if echo "$OPENCODE_TEST" | grep -q "OK"; then
         log_info "opencode API verified: model responded"
     else
