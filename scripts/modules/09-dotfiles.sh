@@ -5,26 +5,7 @@ MODULES_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SCRIPT_DIR="$(dirname "$MODULES_DIR")"
 source "$MODULES_DIR/lib.sh"
 
-log_step "09" "Dotfiles"
-
-REPO_DIR="$(dirname "$SCRIPT_DIR")"
-DOTFILES_DIR=""
-
-if [ -d "$REPO_DIR/zsh" ]; then
-    DOTFILES_DIR="$REPO_DIR"
-    log_info "Using dotfiles from repo: $DOTFILES_DIR"
-else
-    if [ -d "$HOME/dotfiles/zsh" ]; then
-        DOTFILES_DIR="$HOME/dotfiles"
-        log_info "Using dotfiles from ~/dotfiles"
-    fi
-fi
-
-if [ -z "$DOTFILES_DIR" ]; then
-    log_warn "No dotfiles found. Apply dotfiles manually after bootstrap."
-    write_marker "09-dotfiles"
-    exit 0
-fi
+log_step "09" "Dotfiles Setup"
 
 rm -f ~/.fzf.zsh 2>/dev/null
 
@@ -34,25 +15,6 @@ for f in ~/.zshrc ~/.config/tmux/tmux.conf; do
         log_info "Backed up existing: $f → ${f}.bootstrap-backup"
     fi
 done
-
-STOW_PACKAGES="zsh kitty opencode nvim tmux"
-
-for pkg in $STOW_PACKAGES; do
-    if [ -d "$DOTFILES_DIR/$pkg" ]; then
-        cd "$DOTFILES_DIR"
-        if stow "$pkg" 2>&1; then
-            log_info "stowed: $pkg"
-        else
-            if stow --adopt "$pkg" 2>&1; then
-                log_info "stowed (adopted): $pkg"
-            else
-                log_warn "stow $pkg failed — check for conflicts"
-            fi
-        fi
-    fi
-done
-
-cd - > /dev/null
 
 source "$MODULES_DIR/setup-git.sh"
 source "$MODULES_DIR/setup-keybindings.sh"
