@@ -36,18 +36,29 @@ echo "============================================"
 echo "=== Next Steps ==="
 echo "============================================"
 echo ""
-echo "1. Generate age key:"
+
+if [ ! -f "$STATE_DIR/vw-data" ] && [ ! -f "$HOME/.env.local" ]; then
+    echo "1. Configure Vaultwarden CLI:"
+    echo "   bw config server 'https://your-vaultwarden.example.com'"
+    echo "   bw login"
+    echo ""
+    NEXT_NUM=2
+else
+    NEXT_NUM=1
+fi
+
+echo "${NEXT_NUM}. Generate age key:"
 echo "   mkdir -p ~/.config/sops/age"
 echo "   age-keygen -o ~/.config/sops/age/keys.txt"
+NEXT_NUM=$((NEXT_NUM + 1))
 echo ""
-echo "2. Save the public key to .sops.yaml in your project"
+
+echo "${NEXT_NUM}. Save the public key to .sops.yaml in your project"
 echo "   Save the private key in Vaultwarden!"
+NEXT_NUM=$((NEXT_NUM + 1))
 echo ""
-echo "3. Configure Bitwarden CLI:"
-echo "   bw config server 'https://your-vaultwarden.example.com'"
-echo "   bw login"
-echo ""
-echo "4. Log out and back in (required for shell/docker group changes)"
+
+echo "${NEXT_NUM}. Log out and back in (required for shell/docker group changes)"
 echo ""
 
 write_marker "10-summary"
