@@ -8,7 +8,7 @@ STATE_DIR="$HOME/.local/state/bootstrap"
 source "$MODULES_DIR/lib.sh"
 source "$MODULES_DIR/versions.sh"
 
-log_step "06" "Languages & Runtimes"
+log_step "06" "Dev Runtimes"
 
 # --- Python 3 ---
 if check_cmd python3; then
