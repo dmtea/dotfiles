@@ -84,8 +84,7 @@ for layout in root.iter('layout'):
 
     if command -v gsettings &>/dev/null; then
         gsettings set org.gnome.desktop.input-sources sources "[('xkb', 'us'), ('xkb', 'ru+unipunct')]"
-        gsettings set org.gnome.desktop.input-sources xkb-options "['grp:alt_shift_toggle', 'lv3:ralt_switch']"
-        log_info "Keyboard layout set: us + ru+unipunct (Alt+Shift toggle, AltGr level3)"
+        log_info "Keyboard layout set: us + ru+unipunct"
     fi
 else
     log_warn "Custom keyboard layout source not found: $XKB_RU_SRC"

@@ -61,7 +61,7 @@ cp bootstrap.conf.example bootstrap.conf
 | xclip + wl-clipboard | Clipboard for X11 + Wayland |
 | build-essential | Compiler tools (gcc, make) |
 
-Also deploys custom `unipunct` keyboard layout (Russian + US punctuation + Ukrainian AltGr) to system XKB (`/usr/share/X11/xkb/symbols/ru`) and configures GNOME input sources. Layout toggle: Alt+Shift (CapsLock toggle deferred — SPICE double-press issue in VMs).
+Also deploys custom `unipunct` keyboard layout (Russian + US punctuation + Ukrainian AltGr) to system XKB (`/usr/share/X11/xkb/symbols/ru`) and configures GNOME input sources. CapsLock toggle deferred to separate research (SPICE double-press issue in VMs).
 
 ### Early Dotfiles Stow (Step 1b)
 
