@@ -36,6 +36,14 @@ Apps receive `Ctrl+Cyrillic_es` instead of `Ctrl+c` and don't recognize the shor
 │   ├── kitty.conf                   ← main config (includes ru-shortcuts.conf)
 │   ├── current-theme.conf           ← theme colors
 │   └── ru-shortcuts.conf            ← Ctrl→Latin mappings for Russian layout
+├── 00-credentials.md                ← VM access credentials
+├── 01-research-and-plan.md          ← CapsLock session 1: initial setup + dconf attempts
+├── 02-implementation-report.md      ← CapsLock session 1: implementation (before root cause)
+├── 03-claude-debug-report.md        ← CapsLock Claude session: IBus, libinput, keyd, root cause
+├── 04-combined-research.md          ← CapsLock combined findings from all sessions
+├── ru                               ← symbols/ru source file
+├── ru-shortcuts.conf                ← kitty Ctrl→Latin config
+└── xkb-user/                        ← user-level xkb (not currently used)
 ```
 
 ## Host (laptop) Setup
@@ -201,14 +209,15 @@ virsh shutdown freshpop24
 6. Copy .desktop: `cp ~/.local/kitty.app/share/applications/*.desktop ~/.local/share/applications/`
 7. Deploy kitty config: `kitty/kitty.conf`, `kitty/current-theme.conf`, `kitty/ru-shortcuts.conf` → `~/.config/kitty/`
 
-### freshubuntu26 (GNOME) — ✅ PASS
+### freshubuntu26 (GNOME) — ✅ PASS (layout) / ⚠️ CapsLock broken in SPICE VM
 
 | Test | Result |
 |------|--------|
 | Deploy `symbols/ru` | ✅ `sudo cp` works |
 | Patch `evdev.xml` | ✅ Required — GNOME needs variant in evdev.xml |
 | Layout appears in GNOME | ✅ After logout/login |
-| CapsLock toggle us↔ru | ✅ `grp:caps_toggle` works |
+| CapsLock toggle us↔ru (SPICE VM) | ❌ Reverts after ~1 sec — **SPICE double-press bug** (see below) |
+| CapsLock toggle us↔ru (real hardware) | ⏳ Not yet tested — pending Live USB test |
 | kitty installed (0.47.0) | ✅ From official installer |
 | kitty .desktop in launcher | ✅ Needs full paths for Exec/TryExec/Icon |
 | kitty Ctrl+Latin in Russian | ✅ ru-shortcuts.conf works |
@@ -223,6 +232,110 @@ virsh shutdown freshpop24
 6. Install kitty: `curl -fsSL https://sw.kovidgoyal.net/kitty/installer.sh | sh /dev/stdin launch=n`
 7. Fix .desktop paths: Exec, TryExec, Icon → full paths to `~/.local/kitty.app/...`
 8. Deploy kitty config: `kitty/kitty.conf`, `kitty/current-theme.conf`, `kitty/ru-shortcuts.conf` → `~/.config/kitty/`
+
+## CapsLock Layout Toggle — Deep Debug Research
+
+**Date:** 2026-05-27
+**Detailed files:** `~/tmp_xkb/logs/` (full session logs + Claude's debug report)
+
+### Problem
+
+CapsLock as layout toggle (`grp:caps_toggle`) does NOT work in QEMU/KVM VMs with SPICE display. Layout switches then reverts after ~1 second. Same behavior on both COSMIC and GNOME VMs.
+
+### Root Cause: SPICE Double-Press
+
+**QEMU/SPICE synchronizes CapsLock LED state between host and guest**, generating a double keypress:
+
+```
+sudo libinput debug-events | grep -v POINTER
+
+# Single physical CapsLock press:
++12.316s  *** (-1) pressed   ← physical press → layout switches to RU
++12.663s  *** (-1) pressed   ← SPICE sync press → layout switches back to EN
+```
+
+This is NOT a GNOME/Wayland/Mutter/IBus bug. It's SPICE keyboard state synchronization.
+
+### What Was Tried
+
+| Method | Result | Why |
+|--------|--------|-----|
+| `grp:caps_toggle` in xkb-options | ❌ Reverts | SPICE double press |
+| `grp:caps_toggle` + `caps:none` | ❌ Reverts | Same SPICE issue |
+| GNOME keybinding `switch-input-source=['Caps_Lock']` | ❌ Reverts | SPICE double press |
+| `grp:caps_switch` (hold) | ⚠️ Unreliable | Works once, then breaks |
+| Disable IBus completely (`systemctl --user mask`) | ❌ Reverts | SPICE issue, not IBus |
+| keyd → remap CapsLock to Super+Space | ✅ Works | Different keycode, SPICE doesn't sync |
+| virtio keyboard (instead of ps2) | ❌ Reverts | SPICE still syncs CapsLock |
+| Hyprland `kb_options = grp:caps_toggle` | ❌ Reverts | SPICE issue at lower level |
+| Shift+CapsLock | ✅ Works | SPICE doesn't sync Shift state |
+| Super+Space | ✅ Works | Not CapsLock |
+| Alt+Shift | ✅ Works | Not CapsLock |
+
+### Host vs VM Environment
+
+| Property | Laptop (✅ works) | VM (❌ broken) |
+|----------|-------------------|----------------|
+| Display | Real hardware | QEMU/SPICE |
+| Session | X11 | Wayland |
+| GNOME | 42.9 | 50.1 |
+| `grp:caps_toggle` | Works | SPICE double-press |
+
+**Note:** The X11 vs Wayland difference is NOT the cause — it's coincidental. SPICE is the sole culprit.
+
+### Solutions for VM
+
+1. **Switch SPICE → VNC** — VNC does NOT sync CapsLock state:
+   ```xml
+   <graphics type='vnc' port='-1' autoport='yes' listen='127.0.0.1'>
+     <listen type='address' address='127.0.0.1'/>
+   </graphics>
+   ```
+
+2. **keyd (kernel-level remap)** — remaps CapsLock to different keycode:
+   ```ini
+   # /etc/keyd/default.conf
+   [ids]
+   *
+   [main]
+   capslock = M-space
+   ```
+   **Caveat:** IBus must be disabled or it interferes after reboot.
+
+3. **Accept alternative hotkey** — Shift+CapsLock, Super+Space, or Alt+Shift all work in SPICE.
+
+### Solutions for Real Hardware (Live USB / Laptop)
+
+On real hardware without SPICE, `grp:caps_toggle` should work correctly:
+
+```bash
+gsettings set org.gnome.desktop.input-sources sources "[('xkb', 'us'), ('xkb', 'ru+unipunct')]"
+gsettings set org.gnome.desktop.input-sources xkb-options "['grp:caps_toggle', 'lv3:ralt_switch']"
+```
+
+Or via dconf (no D-Bus session needed):
+```bash
+dconf write /org/gnome/desktop/input-sources/sources "[('xkb', 'us'), ('xkb', 'ru+unipunct')]"
+dconf write /org/gnome/desktop/input-sources/xkb-options "['grp:caps_toggle', 'lv3:ralt_switch']"
+```
+
+### Next Steps
+
+- [ ] Test CapsLock with Live USB on real hardware — confirms SPICE is sole cause
+- [ ] If Live USB works → CapsLock config is correct, VM just needs VNC or keyd
+- [ ] If Live USB also fails → deeper GNOME 50 + Wayland investigation needed
+
+### Reference Files
+
+All research files are in this directory (`docs/research/xkb-unipunct-layout/`):
+
+| File | Content |
+|------|---------|
+| `00-credentials.md` | VM access credentials |
+| `01-research-and-plan.md` | First session — initial setup + dconf attempts |
+| `02-implementation-report.md` | First implementation (before root cause known) |
+| `03-claude-debug-report.md` | Claude's deep debug — IBus, libinput, keyd, **root cause found** |
+| `04-combined-research.md` | Combined findings from both sessions |
 
 ## Rules
 

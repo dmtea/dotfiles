@@ -20,10 +20,4 @@ if [ -d "$HOME/.config/tmux/plugins/tpm" ] && [ -f "$HOME/.config/tmux/tmux.conf
     fi
 fi
 
-if [ -d "$HOME/.config/xkb/symbols" ]; then
-    gsettings set org.gnome.desktop.input-sources sources "[('xkb', 'us'), ('xkb', 'ru+ruu')]" \
-        && log_info "Keyboard layout set: us + ruu" \
-        || log_warn "Failed to set keyboard layout via gsettings"
-fi
-
 write_marker "09-dotfiles"

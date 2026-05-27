@@ -17,7 +17,7 @@ BT_HEADPHONES_MAC=""
 BT_MOUSE_MAC=""
 
 # Modules to skip (uncomment to exclude)
-# SKIP_MODULES=(xkb)
+# SKIP_MODULES=()
 
 # Stop on first module failure (1 = abort, 0 = continue)
 # STOP_ON_ERROR=0
