@@ -1,7 +1,6 @@
 {
   "$schema": "https://opencode.ai/config.json",
   "model": "zai-coding-plan/glm-5.1",
-  "default_agent": "0build",
   "autoupdate": true,
   "plugin": [
     "oh-my-openagent@latest",
