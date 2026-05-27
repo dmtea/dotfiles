@@ -173,3 +173,61 @@ Format: **What / Why / How** + commands + verification.
 2. `.local/share/opencode/` in dotfiles — should `auth.json` and app data be stow-managed at all? Consider removing `.local/` from the opencode stow package.
 3. `.gitignore` stow conflict at `~/.config/opencode/.gitignore` — pre-existing file from opencode prevents stow from deploying dotfiles version.
 4. SSH key rotation automation — `ssh-backup` + `env-backup` utilities available, but no cron/systemd timer yet.
+
+---
+
+## VM Bootstrap Testing
+
+### Test Credentials (NEVER ask user, NEVER commit)
+
+All test credentials are in `/tmp/dotfiles-test.env`. Source it before testing:
+
+```bash
+source /tmp/dotfiles-test.env
+```
+
+Contains: VM sudo password, VW URL, VW email, VW master password, VM IPs.
+If file missing → create it. Values are in the agent's session context.
+
+### Test VMs
+
+| VM | OS | DE | IP | Snapshot |
+|----|-----|-----|-----|----------|
+| freshubuntu26 | Ubuntu 26.04 LTS | GNOME 50, Wayland | `192.168.122.204` (DHCP) | `freshready` |
+| freshpop24 | Pop!_OS 24.04 | COSMIC DE, Wayland | `192.168.122.22` (DHCP) | `freshready` |
+
+### MANDATORY Test Procedure
+
+**NEVER skip interactive steps. NEVER press N on prompts without reason.**
+
+1. **Revert VM**: `virsh snapshot-revert <vm> freshready && virsh start <vm>`
+2. **Wait + SSH**: `sleep 15 && ssh dm@<ip>`
+3. **Clone**: `git clone https://github.com/dmtea/dotfiles.git ~/dotfiles`
+4. **Create bootstrap.conf** with ALL values from `/tmp/dotfiles-test.env`:
+   - `GIT_USER_NAME`, `GIT_USER_EMAIL` — any test values
+   - `VW_URL`, `VW_EMAIL`, `VW_PASSWORD` — from test.env
+   - `BT_HEADPHONES_MAC=""`, `BT_MOUSE_MAC=""` — skip
+5. **Run bootstrap**: `STOP_ON_ERROR=1 ./bootstrap.sh`
+6. **Handle ALL prompts via pane**:
+   - sudo → use password from test.env, send via tmux
+   - VW collection selection → select `dmbot` (collection with laptop secrets)
+   - VW env vars → answer Y to apply
+   - SSH keys → answer Y to deploy
+   - BT devices → skip (empty)
+7. **Verify**:
+   - 13/13 modules pass
+   - `test -f ~/.env.local && grep Z_AI_API_KEY ~/.env.local` — secrets pulled
+   - opencode API verified in module 10 summary
+
+### Skills Required
+
+- `pane-tester` — ALL VM testing goes through tmux panes (sudo, VW master password, interactive prompts)
+- Agent MUST check `$TMUX` before starting. Not in tmux → stop and tell user.
+
+### COSMIC vs GNOME
+
+| Feature | GNOME (freshubuntu26) | COSMIC (freshpop24) |
+|---------|----------------------|---------------------|
+| gsettings input-sources | ✅ Works | ❌ COSMIC ignores gsettings |
+| evdev.xml patch | ✅ Required | ❌ Not needed |
+| **Primary test target** | ✅ **ALWAYS use this** | Layout verification only |

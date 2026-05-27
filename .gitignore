@@ -44,3 +44,5 @@ bootstrap.conf
 
 # Backups
 *.bak
+
+tmp/
