@@ -180,10 +180,10 @@ Format: **What / Why / How** + commands + verification.
 
 ### Test Credentials (NEVER ask user, NEVER commit)
 
-All test credentials are in `/tmp/dotfiles-test.env`. Source it before testing:
+All test credentials are in `tmp/test.env` (project-relative). Source it before testing:
 
 ```bash
-source /tmp/dotfiles-test.env
+source ~/dotfiles/tmp/test.env
 ```
 
 Contains: VM sudo password, VW URL, VW email, VW master password, VM IPs.

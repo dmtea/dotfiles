@@ -2,57 +2,74 @@
   "$schema": "https://raw.githubusercontent.com/code-yeongyu/oh-my-openagent/main/assets/oh-my-opencode.schema.json",
   "agents": {
     "sisyphus": {
-      "model": "zai-coding-plan/glm-5.1"
+      "model": "zai-coding-plan/glm-5.1",
+      "fallback_models": []
     },
     "oracle": {
-      "model": "zai-coding-plan/glm-5.1"
+      "model": "zai-coding-plan/glm-5.1",
+      "fallback_models": []
     },
     "librarian": {
-      "model": "zai-coding-plan/glm-5-turbo"
+      "model": "zai-coding-plan/glm-5-turbo",
+      "fallback_models": []
     },
     "explore": {
-      "model": "zai-coding-plan/glm-5-turbo"
+      "model": "zai-coding-plan/glm-5-turbo",
+      "fallback_models": []
     },
     "multimodal-looker": {
-      "model": "zai-coding-plan/glm-4.6v"
+      "model": "zai-coding-plan/glm-4.6v",
+      "fallback_models": []
     },
     "prometheus": {
-      "model": "zai-coding-plan/glm-5.1"
+      "model": "zai-coding-plan/glm-5.1",
+      "fallback_models": []
     },
     "metis": {
-      "model": "zai-coding-plan/glm-5.1"
+      "model": "zai-coding-plan/glm-5.1",
+      "fallback_models": []
     },
     "momus": {
-      "model": "zai-coding-plan/glm-5.1"
+      "model": "zai-coding-plan/glm-5.1",
+      "fallback_models": []
     },
     "atlas": {
-      "model": "zai-coding-plan/glm-5.1"
+      "model": "zai-coding-plan/glm-5.1",
+      "fallback_models": []
     }
   },
   "categories": {
     "visual-engineering": {
-      "model": "zai-coding-plan/glm-5.1"
+      "model": "zai-coding-plan/glm-5.1",
+      "fallback_models": []
     },
     "ultrabrain": {
-      "model": "zai-coding-plan/glm-5.1"
+      "model": "zai-coding-plan/glm-5.1",
+      "fallback_models": []
     },
     "deep": {
-      "model": "zai-coding-plan/glm-5.1"
+      "model": "zai-coding-plan/glm-5.1",
+      "fallback_models": []
     },
     "artistry": {
-      "model": "zai-coding-plan/glm-5.1"
+      "model": "zai-coding-plan/glm-5.1",
+      "fallback_models": []
     },
     "quick": {
-      "model": "zai-coding-plan/glm-5-turbo"
+      "model": "zai-coding-plan/glm-5-turbo",
+      "fallback_models": []
     },
     "unspecified-low": {
-      "model": "zai-coding-plan/glm-5-turbo"
+      "model": "zai-coding-plan/glm-5-turbo",
+      "fallback_models": []
     },
     "unspecified-high": {
-      "model": "zai-coding-plan/glm-5.1"
+      "model": "zai-coding-plan/glm-5.1",
+      "fallback_models": []
     },
     "writing": {
-      "model": "zai-coding-plan/glm-5-turbo"
+      "model": "zai-coding-plan/glm-5-turbo",
+      "fallback_models": []
     }
   },
   "background_task": {
