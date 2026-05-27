@@ -56,8 +56,9 @@ if [ -f "$XKB_RU_SRC" ]; then
     sudo cp "$XKB_RU_SRC" /usr/share/X11/xkb/symbols/ru
     log_info "Replaced system symbols/ru with unipunct layout"
 
-    if ! grep -qw 'unipunct' /usr/share/X11/xkb/rules/evdev.xml 2>/dev/null; then
-        sudo python3 -c "
+    if ! is_cosmic; then
+        if ! grep -qw 'unipunct' /usr/share/X11/xkb/rules/evdev.xml 2>/dev/null; then
+            sudo python3 -c "
 import xml.etree.ElementTree as ET
 path = '/usr/share/X11/xkb/rules/evdev.xml'
 tree = ET.parse(path)
@@ -77,15 +78,33 @@ for layout in root.iter('layout'):
             tree.write(path, xml_declaration=True, encoding='UTF-8')
             break
 "
-        log_info "Patched evdev.xml with unipunct variant"
+            log_info "Patched evdev.xml with unipunct variant"
+        else
+            log_info "evdev.xml already has unipunct variant"
+        fi
     else
-        log_info "evdev.xml already has unipunct variant"
+        log_info "COSMIC detected — skipping evdev.xml patch (not needed)"
     fi
 
-    if command -v gsettings &>/dev/null; then
+    if is_cosmic; then
+        COSMIC_XKB_DIR="$HOME/.config/cosmic/com.system76.CosmicComp/v1"
+        mkdir -p "$COSMIC_XKB_DIR"
+        cat > "$COSMIC_XKB_DIR/xkb_config" << 'RON'
+(
+    rules: "",
+    model: "",
+    layout: "us,ru",
+    variant: ",unipunct",
+    options: Some("lv3:ralt_switch,grp:alt_shift_toggle,compose:rctrl"),
+    repeat_delay: 600,
+    repeat_rate: 25,
+)
+RON
+        log_info "COSMIC xkb_config written: us + ru(unipunct), Alt+Shift toggle"
+    elif command -v gsettings &>/dev/null; then
         gsettings set org.gnome.desktop.input-sources sources "[('xkb', 'us'), ('xkb', 'ru+unipunct')]"
         gsettings set org.gnome.desktop.input-sources xkb-options "['lv3:ralt_switch']"
-        log_info "Keyboard layout set: us + ru+unipunct (AltGr level3)"
+        log_info "GNOME keyboard layout set: us + ru+unipunct (AltGr level3)"
     fi
 else
     log_warn "Custom keyboard layout source not found: $XKB_RU_SRC"
