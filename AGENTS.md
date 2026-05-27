@@ -198,22 +198,36 @@ If file missing → create it. Values are in the agent's session context.
 
 ### MANDATORY Test Procedure
 
-**NEVER skip interactive steps. NEVER press N on prompts without reason.**
+**CRITICAL RULES:**
+- **NEVER put credentials in bootstrap.conf.** bootstrap.conf gets only `GIT_USER_NAME`, `GIT_USER_EMAIL`, `BT_HEADPHONES_MAC=""`, `BT_MOUSE_MAC=""` — nothing else.
+- **ALL credentials are typed interactively through tmux pane** — exactly like a real user would.
+- **NEVER skip interactive steps. NEVER press N on prompts without reason.**
+- **Imitate a human.** Everything the bootstrap asks for — type it via `tmux send-keys` into the pane.
 
-1. **Revert VM**: `virsh snapshot-revert <vm> freshready && virsh start <vm>`
-2. **Wait + SSH**: `sleep 15 && ssh dm@<ip>`
-3. **Clone**: `git clone https://github.com/dmtea/dotfiles.git ~/dotfiles`
-4. **Create bootstrap.conf** with ALL values from `/tmp/dotfiles-test.env`:
-   - `GIT_USER_NAME`, `GIT_USER_EMAIL` — any test values
-   - `VW_URL`, `VW_EMAIL`, `VW_PASSWORD` — from test.env
-   - `BT_HEADPHONES_MAC=""`, `BT_MOUSE_MAC=""` — skip
+**Step-by-step:**
+
+1. **Revert VM**: `virsh destroy <vm> && sleep 5 && virsh snapshot-revert <vm> freshready && virsh start <vm> && sleep 25`
+2. **Create pane**: `tmux split-window -h` → SSH into VM
+3. **Clone**: `git clone https://github.com/dmtea/dotfiles.git ~/dotfiles && cd ~/dotfiles/scripts`
+4. **Create bootstrap.conf** with ONLY non-secret values:
+   ```
+   GIT_USER_NAME="Test User"
+   GIT_USER_EMAIL="test@example.com"
+   BT_HEADPHONES_MAC=""
+   BT_MOUSE_MAC=""
+   ```
+   Do NOT include VW_URL, VW_EMAIL, VW_PASSWORD — these are entered interactively.
 5. **Run bootstrap**: `STOP_ON_ERROR=1 ./bootstrap.sh`
-6. **Handle ALL prompts via pane**:
-   - sudo → use password from test.env, send via tmux
-   - VW collection selection → select `dmbot` (collection with laptop secrets)
-   - VW env vars → answer Y to apply
-   - SSH keys → answer Y to deploy
-   - BT devices → skip (empty)
+6. **Handle ALL prompts via pane** (type each value, just like a human):
+   - sudo password → type from test.env via `tmux send-keys`
+   - "Configure Vaultwarden now?" → type `y`
+   - VW URL → type URL from test.env
+   - VW email → type email from test.env
+   - Master password → type password from test.env
+   - Collection selection → type `1` (dmbot)
+   - "Apply these values?" → type `y`
+   - "Deploy SSH keys?" → type `y`
+   - BT MAC → type Enter (skip)
 7. **Verify**:
    - 13/13 modules pass
    - `test -f ~/.env.local && grep Z_AI_API_KEY ~/.env.local` — secrets pulled
